@@ -21,6 +21,7 @@ export interface CollectorDependencies {
   enabled: () => Promise<boolean>;
   recordBatch: (batch: QueryBatch, status: string, counts: { returned: number; eligible: number; pending: number }, errorKind?: string) => Promise<void>;
   recordPending: (items: ReturnType<typeof normalizeIfindResult>) => Promise<void>;
+  recordSource: (ok: boolean, now: Date, error?: string) => Promise<void>;
 }
 
 const defaults: CollectorDependencies = {
@@ -40,6 +41,11 @@ const defaults: CollectorDependencies = {
       ON CONFLICT (fingerprint) DO UPDATE SET last_seen_at=now(),title=EXCLUDED.title,snippet=EXCLUDED.snippet,
         url=EXCLUDED.url,published_at=EXCLUDED.published_at,publisher=EXCLUDED.publisher,
         verification=EXCLUDED.verification,query_batch=EXCLUDED.query_batch`;
+  },
+  recordSource: async (ok, now, error) => {
+    if (ok) await sql`UPDATE sources SET last_fetch_at=${now},last_ok_at=${now},health='ok',fail_count=0,last_error=NULL,updated_at=now() WHERE id='ifind-news'`;
+    else await sql`UPDATE sources SET last_fetch_at=${now},health=CASE WHEN fail_count+1>=5 THEN 'failing' ELSE 'degraded' END,
+      fail_count=fail_count+1,last_error=${error ?? "iFinD collection failed"},updated_at=now() WHERE id='ifind-news'`;
   },
 };
 
@@ -110,8 +116,12 @@ export async function collectIfindNews(now: Date, overrides: Partial<CollectorDe
     }
   }
 
-  if (summary.status === "quota_exhausted" || summary.status === "auth_invalid") return summary;
+  if (summary.status === "quota_exhausted" || summary.status === "auth_invalid") {
+    await dependencies.recordSource(false, now, summary.status);
+    return summary;
+  }
   if (summary.errors.length) summary.status = "partial";
   else if (summary.returned === 0) summary.status = "no_results";
+  await dependencies.recordSource(summary.status === "ok" || summary.status === "no_results", now, summary.errors[0]?.kind);
   return summary;
 }

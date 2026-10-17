@@ -15,7 +15,7 @@
 |---|---|---|
 | 依赖安装 | 通过 | `npm ci --no-audit --no-fund` |
 | 类型检查 | 通过 | `npm run typecheck` |
-| 独立测试 | 215 项通过 | `npm run test:standalone` |
+| 独立测试 | 216 项通过 | `npm run test:standalone` |
 | 数据库测试 | 827 项通过 | `npm test` |
 | 网页构建 | 通过 | `npm run build -w @aihot/web` |
 | 容器冒烟 | 全部通过 | `node scripts/smoke.ts` |

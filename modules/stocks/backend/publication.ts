@@ -20,6 +20,20 @@ export interface StockPage {
   items: StockPublicationItem[];
 }
 
+export interface WatchlistFeedItem {
+  id: string; title: string; summary: string | null; publishedAt: string | null; source: string;
+  confirmationStatus: "confirmed" | "pending" | null; evidence: string | null;
+}
+
+export function mergeWatchlistItems(items: readonly WatchlistFeedItem[]): WatchlistFeedItem[] {
+  const merged = new Map<string, WatchlistFeedItem>();
+  for (const item of items) {
+    const previous = merged.get(item.id);
+    if (!previous || !previous.evidence && item.evidence || previous.confirmationStatus === "confirmed" && item.confirmationStatus === "pending") merged.set(item.id, item);
+  }
+  return [...merged.values()].sort((a, b) => String(b.publishedAt ?? "").localeCompare(String(a.publishedAt ?? "")) || b.id.localeCompare(a.id));
+}
+
 export async function loadStockPage(market: StockMarket, code: string, now = new Date()): Promise<StockPage | null> {
   const rows = await sql<Array<{
     article_id: string; title: string; summary: string | null; url: string; published_at: Date | null;
@@ -59,12 +73,11 @@ export async function loadWatchlistFeed(stocks: readonly string[], topics: reado
     return loadStockPage(market, code, now);
   }));
   const topicPages = await Promise.all(topics.map((slug) => loadTopicPage(slug, 1, now)));
-  const items = [
+  const items: WatchlistFeedItem[] = [
     ...stockPages.flatMap((page) => page?.items.map((item) => ({ id: item.articleId, title: item.title, summary: item.summary, publishedAt: item.publishedAt, source: item.source.name, confirmationStatus: item.confirmationStatus, evidence: item.evidence })) ?? []),
     ...topicPages.flatMap((page) => page?.items.map((item) => ({ id: item.id, title: item.title, summary: item.summary, publishedAt: item.publishedAt, source: item.source.name, confirmationStatus: null, evidence: null })) ?? []),
   ];
-  return [...new Map(items.map((item) => [item.id, item])).values()]
-    .sort((a, b) => String(b.publishedAt ?? "").localeCompare(String(a.publishedAt ?? "")) || b.id.localeCompare(a.id));
+  return mergeWatchlistItems(items);
 }
 
 export type SourceState = "disabled" | "no_new" | "delayed" | "ifind_no_results" | "quota_exhausted" | "auth_invalid" | "coverage_incomplete" | "ok";
