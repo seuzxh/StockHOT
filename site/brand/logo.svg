@@ -1,1 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="116" fill="#13191c"/><path d="M256 92C271 199 313 241 420 256C313 271 271 313 256 420C241 313 199 271 92 256C199 241 241 199 256 92Z" fill="#2ce2e8"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">StockHOT</title>
+  <rect width="512" height="512" rx="116" fill="#10181b"/>
+  <path d="M132 334h248" stroke="#5d7076" stroke-width="24" stroke-linecap="round"/>
+  <path d="M180 164v208M256 116v280M332 184v168" stroke="#b7c5c9" stroke-width="22" stroke-linecap="round"/>
+  <rect x="151" y="216" width="58" height="104" rx="12" fill="#22d3a6"/>
+  <rect x="227" y="168" width="58" height="126" rx="12" fill="#ffb347"/>
+  <rect x="303" y="232" width="58" height="76" rx="12" fill="#22d3a6"/>
+  <circle cx="380" cy="132" r="34" fill="#ff5f57"/>
+</svg>
