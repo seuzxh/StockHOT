@@ -41,22 +41,42 @@ export async function publishSessionReport(window: SessionWindow, content: Sessi
   return { created: inserted.length === 1, report: { kind: row.kind, tradingDate, cutoffAt: row.cutoff_at.toISOString(), calendarVersion: row.calendar_version, generatedAt: row.generated_at.toISOString(), content: row.content } };
 }
 
+export async function loadSessionReport(kind: SessionKind, tradingDate?: string) {
+  const rows = await sql<Array<{ kind: string; trading_date: string | Date; cutoff_at: Date; calendar_version: string; generated_at: Date; content: SessionReportContent }>>`
+    SELECT kind,trading_date,cutoff_at,calendar_version,generated_at,content FROM stock_session_reports
+    WHERE kind=${kind} ${tradingDate ? sql`AND trading_date=${tradingDate}` : sql``}
+    ORDER BY trading_date DESC LIMIT 1`;
+  const row = rows[0];
+  if (!row) return null;
+  return {
+    kind: row.kind,
+    tradingDate: row.trading_date instanceof Date ? row.trading_date.toISOString().slice(0, 10) : String(row.trading_date),
+    cutoffAt: row.cutoff_at.toISOString(),
+    calendarVersion: row.calendar_version,
+    generatedAt: row.generated_at.toISOString(),
+    content: row.content,
+  };
+}
+
 const SOURCE_IDS = ["jiuyangongshe", "robo-datayes", "ifind-news"];
 
 export async function generateSessionReport(kind: SessionKind, tradingDate: string) {
   const window = sessionWindow(kind, tradingDate);
   if (!window) return { skipped: "not_trading_day" as const };
   const candidates = await sql<ReportCandidate[]>`
-    SELECT DISTINCT p.article_id AS "articleId",p.title,a.published_at AS "publishedAt",a.discovered_at AS "discoveredAt"
+    SELECT DISTINCT p.article_id AS "articleId",p.title,a.published_at AS "publishedAt",p.visible_after AS "discoveredAt"
     FROM publications p JOIN articles a ON a.id=p.article_id
-    JOIN stock_mentions sm ON sm.article_id=p.article_id AND sm.superseded_at IS NULL AND sm.withdrawn_at IS NULL
     JOIN sources s ON s.id=p.source_id
-    WHERE p.selected AND a.discovered_at>=${window.start} AND a.discovered_at<${window.end} AND ${listedCondition(window.end)}
+    WHERE p.selected AND p.visible_after>=${window.start} AND p.visible_after<${window.end} AND ${listedCondition(window.end)}
     ORDER BY "discoveredAt","articleId"`;
-  const rows = await sql<Array<{ id: string; enabled: boolean; last_ok_at: Date | null }>>`
-    SELECT id,enabled,last_ok_at FROM sources WHERE id=ANY(${SOURCE_IDS})`;
+  const rows = await sql<Array<{ id: string; enabled: boolean; health: string; interval_minutes: number; last_fetch_at: Date | null; last_ok_at: Date | null }>>`
+    SELECT id,enabled,health,interval_minutes,last_fetch_at,last_ok_at FROM sources WHERE id=ANY(${SOURCE_IDS})`;
   const byId = new Map(rows.map((row) => [row.id, row]));
-  const coverage = SOURCE_IDS.map((id) => ({ id, available: !!byId.get(id)?.enabled && !!byId.get(id)?.last_ok_at && byId.get(id)!.last_ok_at! >= window.start }));
+  const coverage = SOURCE_IDS.map((id) => {
+    const source = byId.get(id);
+    const freshAfter = new Date(window.end.getTime() - Math.max(source?.interval_minutes ?? 15, 15) * 120_000);
+    return { id, available: !!source?.enabled && source.health === "ok" && !!source.last_fetch_at && !!source.last_ok_at && source.last_ok_at >= source.last_fetch_at && source.last_fetch_at >= freshAfter };
+  });
   return publishSessionReport(window, buildSessionReport(window, candidates, coverage));
 }
 

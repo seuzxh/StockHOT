@@ -22,6 +22,7 @@ interface ItemIn {
   publishedAt?: unknown;
   author?: unknown;
   excerpt?: unknown;
+  bodyStatus?: unknown;
   raw?: { _aihot?: { backfill?: boolean; baseline?: boolean } } & Record<string, unknown>;
 }
 
@@ -49,6 +50,7 @@ export async function ingestItems(body: { sourceId?: unknown; sourceName?: unkno
     publishedAt: Date | null;
     raw: ItemIn["raw"];
     backfill: string | null;
+    bodyStatus: "unconfirmed" | undefined;
   }> = [];
   for (const it of items) {
     if (!it || typeof it !== "object") continue;
@@ -68,6 +70,7 @@ export async function ingestItems(body: { sourceId?: unknown; sourceName?: unkno
       publishedAt: published && Number.isFinite(published.getTime()) ? published : null,
       raw: it.raw,
       backfill: flags.backfill ? "reported-backfill" : flags.baseline ? "reported-baseline" : null,
+      bodyStatus: it.bodyStatus === "unconfirmed" ? "unconfirmed" : undefined,
     });
   }
 
@@ -82,6 +85,7 @@ export async function ingestItems(body: { sourceId?: unknown; sourceName?: unkno
       identityKey: it.identityKey,
       author: it.author,
       excerpt: it.excerpt,
+      bodyStatus: it.bodyStatus,
       publishedAt: it.publishedAt,
       raw: it.raw ?? null,
       via: "ingest",

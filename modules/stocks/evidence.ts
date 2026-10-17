@@ -1,8 +1,9 @@
 import { createHash } from "node:crypto";
 import { sql, type Db } from "@aihot/backend/db";
-import { DEFAULT_SECURITY_MASTER, resolveStockMentions, type StockMention } from "./identity.ts";
+import { resolveStockMentions, type StockMention } from "./identity.ts";
+import { loadSecurityMaster } from "./master.ts";
 
-export const STOCK_IDENTITY_RULE_VERSION = "stock-identity-v1";
+export const STOCK_IDENTITY_RULE_VERSION = "stock-identity-v2";
 
 const hashMention = (mention: StockMention) => createHash("sha256")
   .update(JSON.stringify([mention.market, mention.code, mention.name, mention.evidence, mention.relation, mention.candidates]))
@@ -23,6 +24,10 @@ export async function storeStockMentions(
       VALUES (${articleId},${articleRevision},${mention.market},${mention.code},${mention.name},${mention.evidence},${hashMention(mention)},${mention.relation},${mention.status},${mention.candidates},${STOCK_IDENTITY_RULE_VERSION})
       ON CONFLICT (article_id,article_revision,evidence_hash) DO NOTHING`;
   }
+  await db`INSERT INTO stock_mention_scans (article_id,article_revision,rule_version,processed_at)
+    VALUES (${articleId},${articleRevision},${STOCK_IDENTITY_RULE_VERSION},now())
+    ON CONFLICT (article_id) DO UPDATE SET article_revision=EXCLUDED.article_revision,
+      rule_version=EXCLUDED.rule_version,processed_at=EXCLUDED.processed_at`;
 }
 
 export async function withdrawStockMentions(articleId: string, at = new Date(), db: Db = sql): Promise<void> {
@@ -41,15 +46,16 @@ export async function refreshStockMentions(articleId: string, db: Db = sql): Pro
     return;
   }
   const text = [row.title, row.excerpt, row.body_text].filter(Boolean).join("\n");
-  const mentions = resolveStockMentions({ articleId, text }, DEFAULT_SECURITY_MASTER);
+  const mentions = resolveStockMentions({ articleId, text }, await loadSecurityMaster(new Date(), db));
   await storeStockMentions(articleId, row.revision, mentions, db);
 }
 
 export async function refreshPendingStockMentions(limit = 100): Promise<number> {
   const rows = await sql<Array<{ id: string }>>`
     SELECT a.id FROM articles a
-    LEFT JOIN stock_mentions sm ON sm.article_id=a.id AND sm.article_revision=a.revision
-    WHERE sm.id IS NULL
+    LEFT JOIN stock_mention_scans scan ON scan.article_id=a.id
+      AND scan.article_revision=a.revision AND scan.rule_version=${STOCK_IDENTITY_RULE_VERSION}
+    WHERE scan.article_id IS NULL
     ORDER BY a.discovered_at DESC LIMIT ${limit}`;
   for (const row of rows) await refreshStockMentions(row.id);
   return rows.length;

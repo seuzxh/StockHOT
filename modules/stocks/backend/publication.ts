@@ -1,6 +1,7 @@
 import { sql } from "@aihot/backend/db";
 import { listedCondition } from "@aihot/backend/publication/scope";
 import type { StockMarket } from "../identity.ts";
+import { loadTopicPage } from "@aihot/backend/publication/topics";
 
 export interface StockPublicationItem {
   articleId: string;
@@ -52,6 +53,20 @@ export async function loadStockPage(market: StockMarket, code: string, now = new
   };
 }
 
+export async function loadWatchlistFeed(stocks: readonly string[], topics: readonly string[], now = new Date()) {
+  const stockPages = await Promise.all(stocks.map((id) => {
+    const [market, code] = id.split(":") as [StockMarket, string];
+    return loadStockPage(market, code, now);
+  }));
+  const topicPages = await Promise.all(topics.map((slug) => loadTopicPage(slug, 1, now)));
+  const items = [
+    ...stockPages.flatMap((page) => page?.items.map((item) => ({ id: item.articleId, title: item.title, summary: item.summary, publishedAt: item.publishedAt, source: item.source.name })) ?? []),
+    ...topicPages.flatMap((page) => page?.items.map((item) => ({ id: item.id, title: item.title, summary: item.summary, publishedAt: item.publishedAt, source: item.source.name })) ?? []),
+  ];
+  return [...new Map(items.map((item) => [item.id, item])).values()]
+    .sort((a, b) => String(b.publishedAt ?? "").localeCompare(String(a.publishedAt ?? "")) || b.id.localeCompare(a.id));
+}
+
 export type SourceState = "disabled" | "no_new" | "delayed" | "ifind_no_results" | "quota_exhausted" | "auth_invalid" | "coverage_incomplete" | "ok";
 
 export interface SourceStatus {
@@ -63,9 +78,13 @@ export interface SourceStatus {
 }
 
 export async function loadSourceStatuses(now = new Date()): Promise<SourceStatus[]> {
-  const sources = await sql<Array<{ id: string; name: string; enabled: boolean; health: string; interval_minutes: number; last_fetch_at: Date | null; last_ok_at: Date | null }>>`
-    SELECT id,name,enabled,health,interval_minutes,last_fetch_at,last_ok_at
-    FROM sources WHERE id=ANY(${["jiuyangongshe", "robo-datayes", "ifind-news"]}) ORDER BY id`;
+  const sources = await sql<Array<{ id: string; name: string; enabled: boolean; health: string; interval_minutes: number; last_fetch_at: Date | null; last_ok_at: Date | null; latest_new_count: number | null; latest_status: string | null }>>`
+    SELECT s.id,s.name,s.enabled,s.health,s.interval_minutes,s.last_fetch_at,s.last_ok_at,
+      run.new_count AS latest_new_count,run.status AS latest_status
+    FROM sources s LEFT JOIN LATERAL (
+      SELECT new_count,status FROM fetch_runs WHERE source_id=s.id ORDER BY started_at DESC LIMIT 1
+    ) run ON true
+    WHERE s.id=ANY(${["jiuyangongshe", "robo-datayes", "ifind-news"]}) ORDER BY s.id`;
   const [ifindRun] = await sql<Array<{ detail: Record<string, unknown> | null }>>`
     SELECT detail FROM job_runs WHERE job='ifind.collect' AND status='ok' ORDER BY started_at DESC LIMIT 1`;
   return sources.map((source) => {
@@ -76,8 +95,8 @@ export async function loadSourceStatuses(now = new Date()): Promise<SourceStatus
     else if (ifindStatus === "quota_exhausted") state = "quota_exhausted";
     else if (ifindStatus === "auth_invalid") state = "auth_invalid";
     else if (!source.last_ok_at) state = "coverage_incomplete";
-    else if (source.health === "failing" || !source.last_fetch_at || now.getTime() - source.last_fetch_at.getTime() > source.interval_minutes * 120_000) state = "delayed";
-    else if (source.last_fetch_at.getTime() === source.last_ok_at.getTime()) state = "no_new";
+    else if (source.health !== "ok" || !source.last_fetch_at || now.getTime() - source.last_fetch_at.getTime() > source.interval_minutes * 120_000 || source.latest_status === "failed") state = "delayed";
+    else if (source.latest_status === "ok" && source.latest_new_count === 0) state = "no_new";
     return { id: source.id, name: source.name, state, lastFetchAt: source.last_fetch_at?.toISOString() ?? null, lastOkAt: source.last_ok_at?.toISOString() ?? null };
   });
 }

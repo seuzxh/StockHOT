@@ -53,3 +53,15 @@ test("iFinD client separates auth, quota, timeout and protocol failures without 
   const malformed = await callIfind("search_news", { query: "市场" }, async () => ({ status: 200, headers: sessionHeaders, body: { result: {} } }), { authToken: "token" });
   assert.deepEqual(malformed.ok ? null : malformed.error.kind, "protocol_error");
 });
+
+test("iFinD client treats a successful JSON-RPC quota notice as quota exhaustion", async () => {
+  let step = 0;
+  const result = await callIfind("search_news", { query: "A股" }, async (request) => {
+    step += 1;
+    if (step === 1) return { status: 200, headers: sessionHeaders, body: { jsonrpc: "2.0", id: 1, result: {} } };
+    if (request.body.method === "notifications/initialized") return { status: 202, headers: {}, body: null };
+    return { status: 200, headers: {}, body: { jsonrpc: "2.0", id: 2, result: { content: [{ type: "text", text: JSON.stringify({ code: 1, msg: "success", data: { answer: "当前账户MCP请求用量已耗尽" } }) }] } } };
+  }, { authToken: "token" });
+  assert.equal(result.ok, false);
+  assert.equal(result.ok ? null : result.error.kind, "quota_exhausted");
+});

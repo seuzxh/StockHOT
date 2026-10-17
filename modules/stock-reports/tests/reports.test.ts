@@ -2,7 +2,7 @@ import "../../../tests/setup.ts";
 import assert from "node:assert/strict";
 import { after, test } from "node:test";
 import { closeDb, sql } from "@aihot/backend/db";
-import { buildSessionReport, publishSessionReport } from "../reports.ts";
+import { buildSessionReport, loadSessionReport, publishSessionReport } from "../reports.ts";
 import { sessionWindow } from "../windows.ts";
 
 after(closeDb);
@@ -33,4 +33,6 @@ test("published session reports are immutable snapshots", async () => {
   assert.deepEqual(repeated.report.content.items, []);
   const [count] = await sql<{ n: number }[]>`SELECT count(*)::int AS n FROM stock_session_reports WHERE kind='postmarket' AND trading_date='2026-10-08'`;
   assert.equal(count?.n, 1);
+  assert.deepEqual(await loadSessionReport("postmarket", "2026-10-08"), repeated.report);
+  assert.equal(await loadSessionReport("premarket", "2026-10-08"), null);
 });

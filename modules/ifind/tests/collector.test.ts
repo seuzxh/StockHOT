@@ -50,13 +50,18 @@ test("scheduled iFinD collection uses fixed rolling queries and idempotent exter
   assert.equal(calls[0]?.args.time_start, "2026-10-16");
   assert.equal(calls[0]?.args.time_end, "2026-10-17");
 
-  const articles = await sql<{ url: string; raw: Record<string, any> }[]>`SELECT url,raw FROM articles WHERE source_id='ifind-news'`;
+  const articles = await sql<{ id: string; url: string; body_status: string; raw: Record<string, any> }[]>`SELECT id,url,body_status,raw FROM articles WHERE source_id='ifind-news'`;
   assert.equal(articles.length, 1);
   assert.equal(articles[0]?.raw.externalId, "stable-1");
   assert.equal(articles[0]?.raw.stockhot.channel, "ifind");
   assert.equal(articles[0]?.raw.stockhot.originalPublisher, "某证券交易所");
   assert.equal(articles[0]?.raw.stockhot.evidenceScope, "snippet");
+  assert.equal(articles[0]?.body_status, "unconfirmed");
+  const jobs = await sql<{ name: string }[]>`SELECT name FROM pgboss.job WHERE data->>'articleId'=${articles[0]!.id}`;
+  assert.ok(jobs.every((job) => job.name !== "content.extract-body"), "iFinD snippets must never fetch their original web page");
   assert.equal(JSON.stringify(articles).includes("test-token"), false);
+  const runs = await sql<{ status: string }[]>`SELECT status FROM ifind_query_runs WHERE query_batch->>'requestedAt'='2026-10-17T02:00:00.000Z'`;
+  assert.equal(runs.length, 3);
 });
 
 test("iFinD collection distinguishes no results, quota exhaustion and invalid credentials", async () => {
@@ -99,4 +104,15 @@ test("iFinD collection chunks oversized responses into at most fifty ingest item
     },
   });
   assert.deepEqual(sizes, [50, 1]);
+});
+
+test("a disabled iFinD source makes no MCP request", async () => {
+  await sql`UPDATE sources SET enabled=false WHERE id='ifind-news'`;
+  let calls = 0;
+  const result = await collectIfindNews(new Date("2026-10-18T02:00:00.000Z"), {
+    call: async (tool) => { calls += 1; return ok(tool, []); },
+  });
+  assert.equal(result.status, "disabled");
+  assert.equal(calls, 0);
+  await sql`UPDATE sources SET enabled=true WHERE id='ifind-news'`;
 });

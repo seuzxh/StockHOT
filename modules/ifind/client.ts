@@ -86,6 +86,14 @@ const rpcErrorMessage = (body: unknown): string | null => {
 const validRpcResponse = (body: unknown): body is { jsonrpc: "2.0"; result: unknown } =>
   !!body && typeof body === "object" && (body as { jsonrpc?: unknown }).jsonrpc === "2.0" && "result" in body;
 
+const resultMessage = (result: unknown): string => {
+  if (!result || typeof result !== "object" || !("content" in result)) return "";
+  const content = (result as { content?: unknown }).content;
+  if (!Array.isArray(content)) return "";
+  return content.flatMap((block) => block && typeof block === "object" && "text" in block && typeof (block as { text?: unknown }).text === "string"
+    ? [(block as { text: string }).text] : []).join("\n");
+};
+
 const headers = (token: string, sessionId?: string): Record<string, string> => ({
   "Content-Type": "application/json",
   Accept: "application/json, text/event-stream",
@@ -139,6 +147,16 @@ export async function callIfind(
       return failure(tool, called.status, classify(called.status, message), message);
     }
     if (!validRpcResponse(called.body)) return failure(tool, called.status, "protocol_error", "iFinD 工具响应格式无效");
+    const toolMessage = safeMessage(resultMessage(called.body.result), token);
+    if (/请求用量已耗尽|额度(?:已)?耗尽|quota|rate limit|配额/i.test(toolMessage)) {
+      return failure(tool, called.status, "quota_exhausted", "iFinD 请求额度已耗尽");
+    }
+    if (/凭据|令牌.*(?:失效|无效)|token.*(?:invalid|expired)|unauthor/i.test(toolMessage)) {
+      return failure(tool, called.status, "auth_invalid", "iFinD 服务端凭据无效");
+    }
+    if ((called.body.result as { isError?: unknown }).isError === true) {
+      return failure(tool, called.status, "protocol_error", toolMessage || "iFinD 工具返回错误");
+    }
     return { ok: true, tool, statusCode: called.status, result: called.body.result };
   } catch (error) {
     const message = safeMessage(error, token);

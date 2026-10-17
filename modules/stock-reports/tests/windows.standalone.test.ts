@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { classifyArrival, sessionWindow } from "../windows.ts";
+import { STOCK_REPORTS_MODULE } from "../module.ts";
 
 test("market-session windows use the versioned exchange calendar", () => {
   assert.equal(sessionWindow("premarket", "2026-02-22"), null, "weekend and holiday do not create reports");
@@ -25,4 +26,9 @@ test("late source publication is marked in the next report", () => {
   assert.equal(classifyArrival(new Date("2026-10-07T10:00:00Z"), new Date("2026-10-08T03:00:00Z"), window), "late");
   assert.equal(classifyArrival(new Date("2026-10-08T02:00:00Z"), new Date("2026-10-08T03:00:00Z"), window), "on_time");
   assert.equal(classifyArrival(new Date("2026-10-08T02:00:00Z"), window.end, window), "outside");
+});
+
+test("market-session reports declare public pages and API routes", () => {
+  assert.deepEqual(STOCK_REPORTS_MODULE.pages?.map((page) => "path" in page ? page.path : ""), ["premarket", "postmarket"]);
+  assert.ok(STOCK_REPORTS_MODULE.apiPaths?.some((path) => path.test("/api/stock-reports/premarket/2026-10-08")));
 });

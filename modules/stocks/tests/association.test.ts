@@ -4,7 +4,8 @@ import { after, test } from "node:test";
 import { upsertMaterial } from "@aihot/backend/content/materials";
 import { closeDb, sql } from "@aihot/backend/db";
 import { stopBoss } from "@aihot/backend/jobs/queue";
-import { storeStockMentions, withdrawStockMentions } from "../evidence.ts";
+import { refreshPendingStockMentions, storeStockMentions, withdrawStockMentions } from "../evidence.ts";
+import { importSecurityMaster, loadSecurityMaster } from "../master.ts";
 import { resolveStockMentions, type SecurityMaster } from "../identity.ts";
 
 after(async () => {
@@ -33,7 +34,7 @@ test("stock associations preserve evidence, revisions, corrections and withdrawa
   assert.equal(rows[0]?.market, "SZ");
   assert.equal(rows[0]?.code, "300750");
   assert.match(rows[0]?.evidence_text, /拟扩建/);
-  assert.equal(rows[0]?.rule_version, "stock-identity-v1");
+  assert.equal(rows[0]?.rule_version, "stock-identity-v2");
   assert.equal(rows[0]?.confirmation_status, "confirmed");
 
   const corrected = resolveStockMentions({ articleId: article.articleId, text: "宁德时代有望受益。" }, master);
@@ -48,4 +49,23 @@ test("stock associations preserve evidence, revisions, corrections and withdrawa
   await withdrawStockMentions(article.articleId, withdrawnAt);
   const active = await sql`SELECT 1 FROM stock_mentions WHERE article_id=${article.articleId} AND superseded_at IS NULL AND withdrawn_at IS NULL`;
   assert.equal(active.length, 0);
+});
+
+test("security master snapshots are versioned and empty scans do not repeat", async () => {
+  const at = new Date("2026-10-18T00:00:00.000Z");
+  await importSecurityMaster({ version: "test-20261018", effectiveFrom: at, securities: [
+    { market: "SZ", code: "002594", name: "比亚迪", aliases: ["BYD"] },
+  ] });
+  const master = await loadSecurityMaster(new Date("2026-10-18T01:00:00.000Z"));
+  assert.ok(master.some((item) => item.code === "002594" && item.name === "比亚迪"));
+
+  const sourceId = `stock-scan-${Date.now()}`;
+  await sql`INSERT INTO sources (id,name,kind,config,tier,participation_mode,enabled)
+    VALUES (${sourceId},'Stock scan','external','{}','T1','editorial',true)`;
+  const article = await upsertMaterial({ sourceId, url: `https://example.com/${sourceId}`, title: "无股票实体的资讯", excerpt: "宏观数据公布。", publishedAt: at, via: "ingest" });
+  await storeStockMentions(article.articleId, 1, []);
+  const before = await refreshPendingStockMentions(100);
+  assert.equal((await sql`SELECT 1 FROM stock_mention_scans WHERE article_id=${article.articleId}`).length, 1);
+  const afterSecondScan = await refreshPendingStockMentions(100);
+  assert.ok(afterSecondScan <= before, "completed empty scans must not form an endless newest-item loop");
 });

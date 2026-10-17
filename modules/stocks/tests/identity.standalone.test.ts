@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { resolveStockMentions, type SecurityMaster } from "../identity.ts";
+import { DEFAULT_SECURITY_MASTER, resolveStockMentions, type SecurityMaster } from "../identity.ts";
 
 const master: SecurityMaster = [
   { market: "SH", code: "600519", name: "贵州茅台", aliases: ["茅台"] },
@@ -39,4 +39,17 @@ test("stock identity leaves ambiguous, subsidiary and inferred-benefit mentions 
 
 test("stock identity does not invent companies from a theme alone", () => {
   assert.deepEqual(resolveStockMentions({ articleId: "a6", text: "固态电池板块或受关注。" }, master), []);
+});
+
+test("stock identity rejects numeric substrings and unsafe short aliases", () => {
+  assert.deepEqual(resolveStockMentions({ articleId: "money", text: "募资金额 600519000 元。" }, master), []);
+  assert.deepEqual(resolveStockMentions({ articleId: "bank", text: "平安银行发布年度报告。" }, DEFAULT_SECURITY_MASTER), []);
+});
+
+test("an explicit stock code outside the starter master stays pending", () => {
+  const mentions = resolveStockMentions({ articleId: "byd", text: "比亚迪（002594.SZ）发布公告。" }, master);
+  assert.deepEqual(mentions, [{
+    articleId: "byd", market: "SZ", code: "002594", name: "002594",
+    evidence: "比亚迪（002594.SZ）发布公告。", relation: "explicit_code", status: "pending", candidates: ["SZ:002594"],
+  }]);
 });

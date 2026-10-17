@@ -29,7 +29,7 @@ export interface StockMention {
 export const DEFAULT_SECURITY_MASTER: SecurityMaster = [
   { market: "SH", code: "600519", name: "贵州茅台", aliases: ["茅台"] },
   { market: "SZ", code: "300750", name: "宁德时代", aliases: ["CATL"], subsidiaries: [] },
-  { market: "SH", code: "601318", name: "中国平安", aliases: ["平安"] },
+  { market: "SH", code: "601318", name: "中国平安", aliases: [] },
   { market: "SH", code: "688981", name: "中芯国际", aliases: ["SMIC"] },
 ];
 
@@ -45,11 +45,28 @@ function evidenceFor(text: string, term: string): string {
 export function resolveStockMentions(input: EvidenceInput, master: SecurityMaster): StockMention[] {
   const mentions: StockMention[] = [];
   const resolved = new Set<string>();
-  const codePattern = /(?:(SH|SZ|BJ)[.\s:-]?)?(\d{6})(?:[.\s:-]?(SH|SZ|BJ))?/giu;
+  const codePattern = /(?<!\d)(?:(SH|SZ|BJ)[.\s:-]?)?(\d{6})(?!\d)(?:[.\s:-]?(SH|SZ|BJ))?/giu;
 
   for (const match of input.text.matchAll(codePattern)) {
     const market = (match[1] ?? match[3])?.toUpperCase() as StockMarket | undefined;
     const candidates = master.filter((security) => security.code === match[2] && (!market || security.market === market));
+    if (candidates.length === 0 && market) {
+      const key = `${market}:${match[2]}`;
+      if (!resolved.has(key)) {
+        resolved.add(key);
+        mentions.push({
+          articleId: input.articleId,
+          market,
+          code: match[2]!,
+          name: match[2]!,
+          evidence: evidenceFor(input.text, match[0]),
+          relation: "explicit_code",
+          status: "pending",
+          candidates: [key],
+        });
+      }
+      continue;
+    }
     if (candidates.length !== 1) continue;
     const security = candidates[0]!;
     const key = identity(security);
