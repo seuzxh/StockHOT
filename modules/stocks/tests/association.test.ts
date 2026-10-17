@@ -45,6 +45,14 @@ test("stock associations preserve evidence, revisions, corrections and withdrawa
   assert.equal(rows[1]?.confirmation_status, "pending");
   assert.equal(rows[1]?.relation_type, "inferred_beneficiary");
 
+  const confirmedSameRevision = resolveStockMentions({ articleId: article.articleId, text: "宁德时代（300750.SZ）发布公告。" }, master);
+  await storeStockMentions(article.articleId, 2, confirmedSameRevision, sql, "master-v2");
+  const activeAfterMasterUpdate = await sql<Record<string, any>[]>`SELECT * FROM stock_mentions
+    WHERE article_id=${article.articleId} AND superseded_at IS NULL AND withdrawn_at IS NULL`;
+  assert.equal(activeAfterMasterUpdate.length, 1);
+  assert.equal(activeAfterMasterUpdate[0]?.confirmation_status, "confirmed");
+  assert.equal(activeAfterMasterUpdate[0]?.master_version, "master-v2");
+
   const withdrawnAt = new Date("2026-10-17T03:00:00.000Z");
   await withdrawStockMentions(article.articleId, withdrawnAt);
   const active = await sql`SELECT 1 FROM stock_mentions WHERE article_id=${article.articleId} AND superseded_at IS NULL AND withdrawn_at IS NULL`;

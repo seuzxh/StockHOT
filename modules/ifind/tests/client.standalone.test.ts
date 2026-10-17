@@ -65,3 +65,17 @@ test("iFinD client treats a successful JSON-RPC quota notice as quota exhaustion
   assert.equal(result.ok, false);
   assert.equal(result.ok ? null : result.error.kind, "quota_exhausted");
 });
+
+test("iFinD client does not treat finance vocabulary as transport failures", async () => {
+  for (const title of ["稀土出口配额管理办法发布", "数字身份凭据行业标准发布"]) {
+    let step = 0;
+    const transport: Transport = async (request) => {
+      step += 1;
+      if (step === 1) return { status: 200, headers: sessionHeaders, body: { jsonrpc: "2.0", id: 1, result: {} } };
+      if (request.body.method === "notifications/initialized") return { status: 202, headers: {}, body: null };
+      return { status: 200, headers: {}, body: { jsonrpc: "2.0", id: 2, result: { content: [{ type: "text", text: JSON.stringify([{ title }]) }] } } };
+    };
+    const result = await callIfind("search_news", { query: title }, transport, { authToken: "secret" });
+    assert.equal(result.ok, true, title);
+  }
+});

@@ -59,7 +59,7 @@ export default function StockReportRoute() {
     <section className="card mt-6 p-5">
       <h2 className="font-semibold text-ink">{OUTCOME[report.content.outcome]}</h2>
       {report.content.missingSources.length > 0 && <p className="mt-2 text-sm text-hot">缺失来源：{report.content.missingSources.join("、")}</p>}
-      {report.content.items.length > 0 ? <ol className="mt-4 divide-y divide-line-soft">{report.content.items.map((item) => <li key={item.articleId} className="py-4"><Link className="font-semibold text-ink" to={`/items/${item.articleId}`}>{item.title}</Link><p className="mt-1 text-xs text-ink-4">{item.arrival === "late" ? "迟到资讯" : "按时收录"}</p></li>)}</ol> : <p className="mt-3 text-sm text-ink-4">当前窗口没有可展示条目。</p>}
+      {report.content.items.length > 0 ? <ol className="mt-4 divide-y divide-line-soft">{report.content.items.map((item) => <li key={item.articleId} className="py-4">{item.status === "withdrawn" ? <span className="font-semibold text-ink-4 line-through">{item.title}</span> : <Link className="font-semibold text-ink" to={`/items/${item.articleId}`}>{item.title}</Link>}<p className="mt-1 text-xs text-ink-4">{item.status === "withdrawn" ? "原文已撤回" : item.arrival === "late" ? "迟到资讯" : "按时收录"}</p></li>)}</ol> : <p className="mt-3 text-sm text-ink-4">当前窗口没有可展示条目。</p>}
     </section>
   </main>;
 }

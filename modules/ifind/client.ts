@@ -148,10 +148,10 @@ export async function callIfind(
     }
     if (!validRpcResponse(called.body)) return failure(tool, called.status, "protocol_error", "iFinD 工具响应格式无效");
     const toolMessage = safeMessage(resultMessage(called.body.result), token);
-    if (/请求用量已耗尽|额度(?:已)?耗尽|quota|rate limit|配额/i.test(toolMessage)) {
+    if (/请求用量已耗尽|(?:账户|请求|调用).{0,8}额度(?:已)?耗尽|quota\s+(?:exceeded|exhausted)|rate limit\s+(?:exceeded|reached)/i.test(toolMessage)) {
       return failure(tool, called.status, "quota_exhausted", "iFinD 请求额度已耗尽");
     }
-    if (/凭据|令牌.*(?:失效|无效)|token.*(?:invalid|expired)|unauthor/i.test(toolMessage)) {
+    if (/(?:凭据|令牌).{0,8}(?:失效|无效|过期)|(?:invalid|expired)\s+(?:credential|token)|unauthori[sz]ed/i.test(toolMessage)) {
       return failure(tool, called.status, "auth_invalid", "iFinD 服务端凭据无效");
     }
     if ((called.body.result as { isError?: unknown }).isError === true) {

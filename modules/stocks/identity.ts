@@ -34,6 +34,9 @@ export const DEFAULT_SECURITY_MASTER: SecurityMaster = [
 ];
 
 const escape = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const termPattern = (term: string) => /^[a-z0-9]+$/i.test(term)
+  ? new RegExp(`(?<![a-z0-9])${escape(term)}(?![a-z0-9])`, "iu")
+  : new RegExp(escape(term), "iu");
 const identity = (security: SecurityIdentity) => `${security.market}:${security.code}`;
 const benefit = (text: string) => /受益|利好|有望|概念股|标的/u.test(text);
 
@@ -100,7 +103,7 @@ export function resolveStockMentions(input: EvidenceInput, master: SecurityMaste
   }
 
   for (const [term, candidates] of [...terms].sort((a, b) => b[0].length - a[0].length)) {
-    if (!new RegExp(escape(term), "iu").test(input.text)) continue;
+    if (!termPattern(term).test(input.text)) continue;
     const available = candidates.filter(({ security }) => !resolved.has(identity(security)));
     if (!available.length) continue;
     const evidence = evidenceFor(input.text, term);

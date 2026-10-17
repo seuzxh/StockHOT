@@ -58,7 +58,7 @@ function readStored(): WatchlistData {
 function WatchlistPage() {
   const [stocks, setStocks] = useState<string[]>([]);
   const [topics, setTopics] = useState<string[]>([]);
-  const [items, setItems] = useState<Array<{ id: string; title: string; summary: string | null; source: string }>>([]);
+  const [items, setItems] = useState<Array<{ id: string; title: string; summary: string | null; source: string; confirmationStatus: "confirmed" | "pending" | null; evidence: string | null }>>([]);
   const [draft, setDraft] = useState("");
   const [error, setError] = useState("");
   useEffect(() => { const stored = readStored(); setStocks(stored.stocks); setTopics(stored.topics); }, []);
@@ -82,7 +82,7 @@ function WatchlistPage() {
       {stocks.length ? <ul className="divide-y divide-line-soft">{stocks.map((id) => { const [market, code] = id.split(":"); return <li key={id} className="flex items-center justify-between py-3"><Link className="font-semibold text-accent" to={`/stocks/${market}/${code}`}>{id}</Link><button className="text-sm text-ink-4" onClick={() => save(stocks.filter((stock) => stock !== id))}>移除</button></li>; })}</ul> : <EmptyState title="暂无关注股票">可在股票页加入关注。</EmptyState>}
       {topics.length > 0 && <div className="mt-4 flex flex-wrap gap-2">{topics.map((topic) => <button key={topic} className="rounded-full border border-line px-3 py-1 text-sm" onClick={() => save(stocks, topics.filter((item) => item !== topic))}>#{topic} ×</button>)}</div>}
     </section>
-    <section className="card mt-6 p-5"><h2 className="font-semibold text-ink">关注资讯</h2>{items.length ? <ol className="mt-3 divide-y divide-line-soft">{items.map((item) => <li key={item.id} className="py-3"><p className="text-xs text-ink-4">{item.source}</p><Link className="font-semibold text-ink" to={`/items/${item.id}`}>{item.title}</Link>{item.summary && <p className="mt-1 text-sm text-ink-3">{item.summary}</p>}</li>)}</ol> : <p className="mt-3 text-sm text-ink-4">暂无关注资讯。</p>}</section>
+    <section className="card mt-6 p-5"><h2 className="font-semibold text-ink">关注资讯</h2>{items.length ? <ol className="mt-3 divide-y divide-line-soft">{items.map((item) => <li key={item.id} className="py-3"><div className="flex gap-2 text-xs text-ink-4"><span>{item.source}</span>{item.confirmationStatus === "pending" && <span className="text-amber">关联待确认</span>}</div><Link className="font-semibold text-ink" to={`/items/${item.id}`}>{item.title}</Link>{item.evidence ? <blockquote className="mt-1 border-l-2 border-accent pl-2 text-sm text-ink-3">{item.evidence}</blockquote> : item.summary && <p className="mt-1 text-sm text-ink-3">{item.summary}</p>}</li>)}</ol> : <p className="mt-3 text-sm text-ink-4">暂无关注资讯。</p>}</section>
     <section className="card mt-6 p-5">
       <h2 className="font-semibold text-ink">导入与导出</h2>
       <textarea aria-label="关注列表 JSON" value={draft} onChange={(event) => setDraft(event.target.value)} className="mt-3 min-h-32 w-full rounded-lg border border-line bg-surface p-3 font-mono text-sm" />

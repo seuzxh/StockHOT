@@ -8,7 +8,7 @@ export interface ReportCandidate { articleId: string; title: string; publishedAt
 export interface SessionReportContent {
   outcome: "highlights" | "no_highlights" | "incomplete";
   missingSources: string[];
-  items: Array<{ articleId: string; title: string; publishedAt: string | null; discoveredAt: string; arrival: "late" | "on_time" }>;
+  items: Array<{ articleId: string; title: string; publishedAt: string | null; discoveredAt: string; arrival: "late" | "on_time"; status: "active" | "withdrawn" }>;
 }
 
 export function buildSessionReport(window: SessionWindow, candidates: readonly ReportCandidate[], sources: readonly SourceCoverage[]): SessionReportContent {
@@ -21,6 +21,7 @@ export function buildSessionReport(window: SessionWindow, candidates: readonly R
       publishedAt: candidate.publishedAt?.toISOString() ?? null,
       discoveredAt: candidate.discoveredAt.toISOString(),
       arrival,
+      status: "active" as const,
     }];
   });
   return { outcome: missingSources.length ? "incomplete" : items.length ? "highlights" : "no_highlights", missingSources, items };
@@ -48,13 +49,19 @@ export async function loadSessionReport(kind: SessionKind, tradingDate?: string)
     ORDER BY trading_date DESC LIMIT 1`;
   const row = rows[0];
   if (!row) return null;
+  const ids = row.content.items.map((item) => item.articleId);
+  const active = ids.length ? new Set((await sql<{ article_id: string }[]>`
+    SELECT article_id FROM publications WHERE article_id=ANY(${ids}::text[]) AND visibility<>'withdrawn'`
+  ).map((item) => item.article_id)) : new Set<string>();
+  const items = row.content.items.map((item) => ({ ...item, status: active.has(item.articleId) ? "active" as const : "withdrawn" as const }));
+  const content = { ...row.content, items };
   return {
     kind: row.kind,
     tradingDate: row.trading_date instanceof Date ? row.trading_date.toISOString().slice(0, 10) : String(row.trading_date),
     cutoffAt: row.cutoff_at.toISOString(),
     calendarVersion: row.calendar_version,
     generatedAt: row.generated_at.toISOString(),
-    content: row.content,
+    content,
   };
 }
 
@@ -64,7 +71,11 @@ export async function generateSessionReport(kind: SessionKind, tradingDate: stri
   const window = sessionWindow(kind, tradingDate);
   if (!window) return { skipped: "not_trading_day" as const };
   const candidates = await sql<ReportCandidate[]>`
-    SELECT DISTINCT p.article_id AS "articleId",p.title,a.published_at AS "publishedAt",p.visible_after AS "discoveredAt"
+    SELECT DISTINCT p.article_id AS "articleId",COALESCE((
+      SELECT revision.title FROM article_revisions revision
+      WHERE revision.article_id=p.article_id AND revision.created_at<=${window.end}
+      ORDER BY revision.created_at DESC,revision.revision DESC LIMIT 1
+    ),p.title) AS title,a.published_at AS "publishedAt",p.visible_after AS "discoveredAt"
     FROM publications p JOIN articles a ON a.id=p.article_id
     JOIN sources s ON s.id=p.source_id
     WHERE p.selected AND p.visible_after>=${window.start} AND p.visible_after<${window.end} AND ${listedCondition(window.end)}
@@ -72,10 +83,14 @@ export async function generateSessionReport(kind: SessionKind, tradingDate: stri
   const rows = await sql<Array<{ id: string; enabled: boolean; health: string; interval_minutes: number; last_fetch_at: Date | null; last_ok_at: Date | null }>>`
     SELECT id,enabled,health,interval_minutes,last_fetch_at,last_ok_at FROM sources WHERE id=ANY(${SOURCE_IDS})`;
   const byId = new Map(rows.map((row) => [row.id, row]));
+  const [ifindRun] = await sql<Array<{ status: string; detail: Record<string, unknown> | null }>>`
+    SELECT status,detail FROM job_runs WHERE job='ifind.collect' AND started_at<=${window.end}
+    ORDER BY started_at DESC LIMIT 1`;
+  const ifindCovered = ifindRun?.status === "ok" && ["ok", "no_results"].includes(String(ifindRun.detail?.status ?? ""));
   const coverage = SOURCE_IDS.map((id) => {
     const source = byId.get(id);
     const freshAfter = new Date(window.end.getTime() - Math.max(source?.interval_minutes ?? 15, 15) * 120_000);
-    return { id, available: !!source?.enabled && source.health === "ok" && !!source.last_fetch_at && !!source.last_ok_at && source.last_ok_at >= source.last_fetch_at && source.last_fetch_at >= freshAfter };
+    return { id, available: !!source?.enabled && source.health === "ok" && !!source.last_fetch_at && !!source.last_ok_at && source.last_ok_at >= source.last_fetch_at && source.last_fetch_at >= freshAfter && (id !== "ifind-news" || ifindCovered) };
   });
   return publishSessionReport(window, buildSessionReport(window, candidates, coverage));
 }

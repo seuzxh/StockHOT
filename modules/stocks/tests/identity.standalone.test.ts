@@ -44,6 +44,7 @@ test("stock identity does not invent companies from a theme alone", () => {
 test("stock identity rejects numeric substrings and unsafe short aliases", () => {
   assert.deepEqual(resolveStockMentions({ articleId: "money", text: "募资金额 600519000 元。" }, master), []);
   assert.deepEqual(resolveStockMentions({ articleId: "bank", text: "平安银行发布年度报告。" }, DEFAULT_SECURITY_MASTER), []);
+  assert.deepEqual(resolveStockMentions({ articleId: "latin", text: "SMICRO 发布芯片。" }, DEFAULT_SECURITY_MASTER), []);
 });
 
 test("an explicit stock code outside the starter master stays pending", () => {

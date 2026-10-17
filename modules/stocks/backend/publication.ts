@@ -60,8 +60,8 @@ export async function loadWatchlistFeed(stocks: readonly string[], topics: reado
   }));
   const topicPages = await Promise.all(topics.map((slug) => loadTopicPage(slug, 1, now)));
   const items = [
-    ...stockPages.flatMap((page) => page?.items.map((item) => ({ id: item.articleId, title: item.title, summary: item.summary, publishedAt: item.publishedAt, source: item.source.name })) ?? []),
-    ...topicPages.flatMap((page) => page?.items.map((item) => ({ id: item.id, title: item.title, summary: item.summary, publishedAt: item.publishedAt, source: item.source.name })) ?? []),
+    ...stockPages.flatMap((page) => page?.items.map((item) => ({ id: item.articleId, title: item.title, summary: item.summary, publishedAt: item.publishedAt, source: item.source.name, confirmationStatus: item.confirmationStatus, evidence: item.evidence })) ?? []),
+    ...topicPages.flatMap((page) => page?.items.map((item) => ({ id: item.id, title: item.title, summary: item.summary, publishedAt: item.publishedAt, source: item.source.name, confirmationStatus: null, evidence: null })) ?? []),
   ];
   return [...new Map(items.map((item) => [item.id, item])).values()]
     .sort((a, b) => String(b.publishedAt ?? "").localeCompare(String(a.publishedAt ?? "")) || b.id.localeCompare(a.id));
