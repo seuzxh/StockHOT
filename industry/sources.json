@@ -4,8 +4,18 @@
     {
       "id": "jiuyangongshe",
       "name": "韭研公社",
-      "kind": "external",
-      "config": {},
+      "kind": "web_list",
+      "config": {
+        "url": "https://www.jiuyangongshe.com/study_publish",
+        "baseUrl": "https://www.jiuyangongshe.com/",
+        "parseMode": "html",
+        "itemSelector": ".community-bar > ul > li",
+        "linkSelector": ".html-text a[href^='/a/']",
+        "titleSelector": ".book-title",
+        "publishedAtSelector": ".fs13-ash",
+        "publishedAtUtcOffset": "+08:00",
+        "allowUrlPrefixes": ["https://www.jiuyangongshe.com/a/"]
+      },
       "tier": "T2",
       "owner_entity_id": null,
       "participation_mode": "isolated",
