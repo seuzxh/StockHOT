@@ -1,0 +1,8 @@
+{
+  "name": "@stockhot/ifind",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./*": "./*.ts"
+  }
+}
