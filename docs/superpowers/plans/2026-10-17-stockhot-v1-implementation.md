@@ -411,27 +411,27 @@
 - 输出：可复现的验证证据。
 - 输出：GitHub 仓库 `seuzxh/StockHOT`。
 
-- [ ] **步骤 1：运行静态和独立测试**
+- [x] **步骤 1：运行静态和独立测试**
 
 使用 Node.js 24.11+ 运行 `npm ci`、`npm run typecheck`、`npm run test:standalone` 和 `npm run build -w @aihot/web`。
 
-- [ ] **步骤 2：运行 PostgreSQL 测试**
+- [x] **步骤 2：运行 PostgreSQL 测试**
 
 测试数据库名称必须以 `_test` 结尾。运行完整 `npm test`。
 
-- [ ] **步骤 3：运行 Docker Compose 冒烟测试**
+- [x] **步骤 3：运行 Docker Compose 冒烟测试**
 
 使用本地随机凭据。模型和 iFinD 使用模拟服务。运行 `node scripts/smoke.ts --base http://localhost:3000`。
 
-- [ ] **步骤 4：运行 iFinD 实际能力验证**
+- [x] **步骤 4：运行 iFinD 实际能力验证**
 
 使用用户授权的凭据。先直接调用新闻工具。只有工具缺失或权限不符时，才列出工具。查询窄时间窗。核对可追溯字段。验证后删除临时输出。
 
-- [ ] **步骤 5：完成逐项验收审计**
+- [x] **步骤 5：完成逐项验收审计**
 
 将 R01 至 R13、A01 至 A27 映射到测试或运行证据。未解决项必须明确记录。必要来源未验证时，不得宣称正式完成。
 
-- [ ] **步骤 6：添加 CI 和验证记录**
+- [x] **步骤 6：添加 CI 和验证记录**
 
 CI 不得需要真实凭据。CI 不得访问外部服务。
 

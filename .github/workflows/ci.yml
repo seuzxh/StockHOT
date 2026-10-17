@@ -1,0 +1,32 @@
+name: StockHOT policy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-policy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: npm ci --no-audit --no-fund
+      - name: StockHOT offline checks
+        run: >-
+          node --import ./tests/standalone.ts --test
+          tests/stockhot-identity.standalone.test.ts
+          tests/stockhot-industry.standalone.test.ts
+          tests/stock-source-adapters.standalone.test.ts
+          modules/ifind/tests/client.standalone.test.ts
+          modules/ifind/tests/normalize.standalone.test.ts
+          modules/stocks/tests/identity.standalone.test.ts
+          modules/stocks/tests/routes.standalone.test.ts
+          modules/stock-reports/tests/windows.standalone.test.ts

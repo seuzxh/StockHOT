@@ -92,7 +92,7 @@ test("a real paired restore opens a feedback screenshot when forwarding is disab
   // Next to this file's own database, and dropped with it.
   const name = `${new URL(config.databaseUrl).pathname.slice(1)}_restore_test`;
   assert.match(name, /^[a-z0-9_]+_test$/);
-  await sql.unsafe(`CREATE DATABASE "${name}"`);
+  await sql.unsafe(`CREATE DATABASE "${name}" TEMPLATE template0`);
   databases.add(name);
   const restoredUrl = new URL(config.databaseUrl);
   restoredUrl.pathname = `/${name}`;

@@ -5,10 +5,30 @@
 需要一台装了 Docker（带 Compose）的机器。云服务器建议至少 2 核、4 GB 内存，构建镜像时要用到。
 
 ```bash
-git clone https://github.com/KKKKhazix/AIHOT.git myhot
-cd myhot
+git clone https://github.com/seuzxh/StockHOT.git StockHOT
+cd StockHOT
 node scripts/init-env.ts --llm-key <你的模型 API Key>
 ```
+
+同花顺资讯只通过 iFinD MCP 获取。
+系统不抓取同花顺网页。
+
+在 `.env` 中配置以下字段：
+
+```dotenv
+IFIND_NEWS_ENABLED=true
+IFIND_MCP_AUTH_TOKEN=<你的 iFinD MCP 密钥>
+IFIND_NEWS_INTERVAL_MINUTES=5
+```
+
+不要把 iFinD 密钥提交到仓库。
+启动后先检查“来源状态”页面。
+
+韭研公社默认保持停用。
+启用前须完成五个交易日验证。
+萝卜投研当前没有采集适配器。
+其资讯路径受 robots 规则限制。
+后续接入须使用官方授权接口。
 
 `init-env.ts` 会生成 `.env`，填好随机密钥和管理员密码，并把密码打印一次。机器上没有 Node 的话，把 `.env.example` 复制成 `.env`，自己填 `ADMIN_PASSWORD`（至少 12 位）、`SESSION_SECRET`、`IMG_PROXY_SIGN_SECRET`、`POSTGRES_PASSWORD`（各用 `openssl rand -hex 32` 生成）和 `LLM_API_KEY`。
 

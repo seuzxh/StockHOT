@@ -15,16 +15,16 @@ test("topic lists and pool counts share the exact membership predicate", async (
   const at = new Date("2026-01-01T00:00:00Z");
   const now = new Date(+at + 1000);
   const cases = [
-    { title: "", original: null, tags: ["Agent"], topics: ["agent"] },
-    { title: "Anthropic Agent", original: null, tags: [], topics: [] },
-    { title: "", original: null, tags: ["entity:anthropic"], topics: ["anthropic"] },
-    { title: "Unrelated", original: null, tags: ["entity:anthropic", "entity:openai"], topics: [] },
-    { title: "Unrelated", original: "ANTHROPIC launches a model", tags: ["entity:anthropic", "entity:openai"], topics: ["anthropic"] },
-    { title: "Metadata", original: null, tags: ["entity:meta", "entity:openai"], topics: [] },
-    { title: "发布Meta的新模型", original: null, tags: ["entity:meta", "entity:openai"], topics: ["meta"] },
-    { title: "Unselected", original: null, tags: ["Agent", "entity:anthropic"], topics: ["agent", "anthropic"], selected: false },
-    { title: "Withdrawn", original: null, tags: ["Agent", "entity:anthropic"], topics: ["agent", "anthropic"], visibility: "withdrawn" },
-    { title: "Future", original: null, tags: ["Agent", "entity:anthropic"], topics: ["agent", "anthropic"], future: true },
+    { title: "", original: null, tags: ["新能源"], topics: ["new-energy"] },
+    { title: "宁德时代新能源", original: null, tags: [], topics: [] },
+    { title: "", original: null, tags: ["entity:sz-300750"], topics: ["sz-300750"] },
+    { title: "Unrelated", original: null, tags: ["entity:sz-300750", "entity:sh-600519"], topics: [] },
+    { title: "Unrelated", original: "CATL announces batteries", tags: ["entity:sz-300750", "entity:sh-600519"], topics: ["sz-300750"] },
+    { title: "Unrelated", original: null, tags: ["entity:sh-688981", "entity:sh-600519"], topics: [] },
+    { title: "中芯国际发布公告", original: null, tags: ["entity:sh-688981", "entity:sh-600519"], topics: ["sh-688981"] },
+    { title: "Unselected", original: null, tags: ["新能源", "entity:sz-300750"], topics: ["sz-300750", "new-energy"], selected: false },
+    { title: "Withdrawn", original: null, tags: ["新能源", "entity:sz-300750"], topics: ["sz-300750", "new-energy"], visibility: "withdrawn" },
+    { title: "Future", original: null, tags: ["新能源", "entity:sz-300750"], topics: ["sz-300750", "new-energy"], future: true },
   ];
   await sql`INSERT INTO sources (id, name, kind, tier) VALUES (${prefix}, ${prefix}, 'rss', 'T1')`;
   for (const [i, row] of cases.entries()) {
@@ -36,7 +36,7 @@ test("topic lists and pool counts share the exact membership predicate", async (
       VALUES (${id}, ${prefix}, ${row.title}, ${row.original}, ${`https://example.org/${id}`}, ${at}, ${at},
         ${at}, ${row.future ? new Date(+now + 1) : at}, ${row.selected ?? true}, true, ${row.visibility ?? "public"}, 'news', ${row.tags})`;
   }
-  const topics = ["anthropic", "meta", "agent"].map(slug => findTopic(slug)!);
+  const topics = ["sz-300750", "sh-688981", "new-energy"].map(slug => findTopic(slug)!);
   const membership = new Map((await sql<{ id: string; topics: string[] }[]>`
     SELECT p.article_id AS id, ${topicMembership(topics)} AS topics FROM publications p WHERE p.source_id = ${prefix}`)
     .map(row => [row.id, row.topics]));

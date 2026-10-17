@@ -118,7 +118,11 @@ const words = (text: string) => new Set(text.match(/[A-Za-z_][A-Za-z0-9_]*/g));
 test("every table and column is used by the code that reads and writes the database", async () => {
   const files = [...["packages/backend/src", "apps/api/src", "apps/worker/src"].flatMap((dir) => sources(dir)), ...modules()].map(({ text }) => words(text));
   const columns = await sql<{ table_name: string; column_name: string }[]>`
-    SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name <> 'schema_migrations'`;
+    SELECT cols.table_name, cols.column_name FROM information_schema.columns cols
+    WHERE cols.table_schema = 'public' AND cols.table_name <> 'schema_migrations'
+      AND cols.table_name NOT IN (
+        SELECT c.relname FROM pg_class c JOIN pg_depend d ON d.objid = c.oid AND d.deptype = 'e'
+      )`;
   const unused = new Set<string>();
   for (const { table_name: table, column_name: column } of columns) {
     const users = files.filter((names) => names.has(table));
