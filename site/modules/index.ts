@@ -3,5 +3,6 @@
 // pages' parts. Each list keeps the order its entries appear in on the site.
 import type { ModuleDeclaration } from "@aihot/contracts/modules";
 import { IFIND_MODULE } from "../../modules/ifind/module.ts";
+import { STOCKS_MODULE } from "../../modules/stocks/module.ts";
 
-export const MODULES: readonly ModuleDeclaration[] = [IFIND_MODULE];
+export const MODULES: readonly ModuleDeclaration[] = [IFIND_MODULE, STOCKS_MODULE];

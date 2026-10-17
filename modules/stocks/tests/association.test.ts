@@ -1,0 +1,51 @@
+import "../../../tests/setup.ts";
+import assert from "node:assert/strict";
+import { after, test } from "node:test";
+import { upsertMaterial } from "@aihot/backend/content/materials";
+import { closeDb, sql } from "@aihot/backend/db";
+import { stopBoss } from "@aihot/backend/jobs/queue";
+import { storeStockMentions, withdrawStockMentions } from "../evidence.ts";
+import { resolveStockMentions, type SecurityMaster } from "../identity.ts";
+
+after(async () => {
+  await stopBoss();
+  await closeDb();
+});
+
+test("stock associations preserve evidence, revisions, corrections and withdrawal visibility", async () => {
+  const sourceId = `stock-association-${Date.now()}`;
+  await sql`INSERT INTO sources (id,name,kind,config,tier,participation_mode,enabled)
+    VALUES (${sourceId},'Stock evidence','external','{}','T1','editorial',true)`;
+  const article = await upsertMaterial({
+    sourceId,
+    url: `https://example.com/${sourceId}`,
+    title: "宁德时代发布公告",
+    excerpt: "宁德时代（300750.SZ）拟扩建产线。",
+    publishedAt: new Date("2026-10-17T01:00:00.000Z"),
+    via: "ingest",
+  });
+  const master: SecurityMaster = [{ market: "SZ", code: "300750", name: "宁德时代", aliases: ["CATL"] }];
+  const first = resolveStockMentions({ articleId: article.articleId, text: "宁德时代（300750.SZ）拟扩建产线。" }, master);
+  await storeStockMentions(article.articleId, 1, first);
+
+  let rows = await sql<Record<string, any>[]>`SELECT * FROM stock_mentions WHERE article_id=${article.articleId} ORDER BY id`;
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0]?.market, "SZ");
+  assert.equal(rows[0]?.code, "300750");
+  assert.match(rows[0]?.evidence_text, /拟扩建/);
+  assert.equal(rows[0]?.rule_version, "stock-identity-v1");
+  assert.equal(rows[0]?.confirmation_status, "confirmed");
+
+  const corrected = resolveStockMentions({ articleId: article.articleId, text: "宁德时代有望受益。" }, master);
+  await storeStockMentions(article.articleId, 2, corrected);
+  rows = await sql<Record<string, any>[]>`SELECT * FROM stock_mentions WHERE article_id=${article.articleId} ORDER BY article_revision`;
+  assert.equal(rows.length, 2);
+  assert.ok(rows[0]?.superseded_at);
+  assert.equal(rows[1]?.confirmation_status, "pending");
+  assert.equal(rows[1]?.relation_type, "inferred_beneficiary");
+
+  const withdrawnAt = new Date("2026-10-17T03:00:00.000Z");
+  await withdrawStockMentions(article.articleId, withdrawnAt);
+  const active = await sql`SELECT 1 FROM stock_mentions WHERE article_id=${article.articleId} AND superseded_at IS NULL AND withdrawn_at IS NULL`;
+  assert.equal(active.length, 0);
+});
