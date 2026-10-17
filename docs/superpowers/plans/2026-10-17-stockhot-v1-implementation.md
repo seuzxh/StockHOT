@@ -57,7 +57,7 @@
 
 ---
 
-### 任务 1：建立 AIHOT 基线和仓库身份
+### Task 1：建立 AIHOT 基线和仓库身份
 
 **文件：**
 
@@ -99,7 +99,7 @@
 
 提交信息：`chore: establish StockHOT baseline`
 
-### 任务 2：定制金融站点和精选契约
+### Task 2：定制金融站点和精选契约
 
 **文件：**
 
@@ -150,7 +150,7 @@
 
 提交信息：`feat: customize StockHOT financial domain`
 
-### 任务 3：添加 iFinD MCP 客户端和结果标准化
+### Task 3：添加 iFinD MCP 客户端和结果标准化
 
 **文件：**
 
@@ -194,7 +194,7 @@
 
 提交信息：`feat: add iFinD news client`
 
-### 任务 4：定时获取 iFinD 资讯并幂等入库
+### Task 4：定时获取 iFinD 资讯并幂等入库
 
 **文件：**
 
@@ -235,7 +235,7 @@
 
 提交信息：`feat: ingest scheduled iFinD news`
 
-### 任务 5：添加股票身份和证据关联
+### Task 5：添加股票身份和证据关联
 
 **文件：**
 
@@ -279,7 +279,7 @@
 
 提交信息：`feat: add evidence-backed stock associations`
 
-### 任务 6：添加股票页面、关注筛选和来源状态
+### Task 6：添加股票页面、关注筛选和来源状态
 
 **文件：**
 
@@ -323,7 +323,7 @@
 
 提交信息：`feat: add stock watchlist workspace`
 
-### 任务 7：添加盘前和盘后报告契约
+### Task 7：添加盘前和盘后报告契约
 
 **文件：**
 
@@ -362,7 +362,7 @@
 
 提交信息：`feat: add market-session reports`
 
-### 任务 8：验证实时来源适配器并失败关闭
+### Task 8：验证实时来源适配器并失败关闭
 
 **文件：**
 
@@ -397,7 +397,7 @@
 
 提交信息：`feat: validate StockHOT source adapters`
 
-### 任务 9：完成验证、部署冒烟和 GitHub 发布
+### Task 9：完成验证、部署冒烟和 GitHub 发布
 
 **文件：**
 
