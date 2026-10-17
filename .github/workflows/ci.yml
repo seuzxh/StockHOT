@@ -19,14 +19,6 @@ jobs:
           node-version: 24
           package-manager-cache: false
       - run: npm ci --no-audit --no-fund
-      - name: StockHOT offline checks
-        run: >-
-          node --import ./tests/standalone.ts --test
-          tests/stockhot-identity.standalone.test.ts
-          tests/stockhot-industry.standalone.test.ts
-          tests/stock-source-adapters.standalone.test.ts
-          modules/ifind/tests/client.standalone.test.ts
-          modules/ifind/tests/normalize.standalone.test.ts
-          modules/stocks/tests/identity.standalone.test.ts
-          modules/stocks/tests/routes.standalone.test.ts
-          modules/stock-reports/tests/windows.standalone.test.ts
+      - run: npm run typecheck
+      - run: npm run test:standalone
+      - run: npm run build -w @aihot/web
