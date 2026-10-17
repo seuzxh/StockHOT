@@ -32,3 +32,18 @@ test("a paused external source rejects pushed items without recording a successf
   await sql`UPDATE sources SET enabled = true WHERE id = ${sourceId}`;
   assert.deepEqual(await ingestItems({ sourceId, items: [{ title: "New report", url: `https://example.org/${sourceId}` }] }), { ok: true, created: 1 });
 });
+
+test("external ids remain idempotent when an upstream URL changes", async () => {
+  const sourceId = `test-external-id-${tag()}`;
+  await sql`INSERT INTO sources (id,name,kind,config,tier,participation_mode,enabled)
+    VALUES (${sourceId},'External identity','external','{}','T2','editorial',true)`;
+  const raw = { externalId: "stable-entry", stockhot: { channel: "ifind", originalPublisher: "交易所", evidenceScope: "snippet" } };
+
+  assert.deepEqual(await ingestItems({ sourceId, items: [{ title: "公告", url: `https://example.org/${sourceId}/first`, raw }] }), { ok: true, created: 1 });
+  assert.deepEqual(await ingestItems({ sourceId, items: [{ title: "公告", url: `https://example.org/${sourceId}/renamed`, raw }] }), { ok: true, created: 0 });
+
+  const rows = await sql<{ raw: Record<string, any> }[]>`SELECT raw FROM articles WHERE source_id=${sourceId}`;
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0]?.raw.externalId, "stable-entry");
+  assert.equal(rows[0]?.raw.stockhot.originalPublisher, "交易所");
+});

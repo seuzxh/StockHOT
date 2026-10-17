@@ -2,7 +2,7 @@
 // rule as every other entrance: old or future-dated items and explicit backfill never count as
 // today's news and are never pushed. Unknown sources are created isolated, awaiting an operator.
 import { sql } from "../db.ts";
-import { upsertMaterial } from "../content/materials.ts";
+import { reuseExternalMaterialIdentities, upsertMaterial } from "../content/materials.ts";
 import { queueProcessing } from "../jobs/content.ts";
 import { normalizeUrl } from "../lib/url.ts";
 
@@ -21,6 +21,7 @@ interface ItemIn {
   url?: unknown;
   publishedAt?: unknown;
   author?: unknown;
+  excerpt?: unknown;
   raw?: { _aihot?: { backfill?: boolean; baseline?: boolean } } & Record<string, unknown>;
 }
 
@@ -39,7 +40,16 @@ export async function ingestItems(body: { sourceId?: unknown; sourceName?: unkno
   if (!source) throw new IngestError(409, "source paused");
 
   const seen = new Set<string>();
-  let created = 0;
+  const candidates: Array<{
+    identityKey?: string;
+    title: string;
+    rawUrl: string;
+    author: string | null;
+    excerpt: string | null;
+    publishedAt: Date | null;
+    raw: ItemIn["raw"];
+    backfill: string | null;
+  }> = [];
   for (const it of items) {
     if (!it || typeof it !== "object") continue;
     const title = typeof it.title === "string" ? it.title.trim() : "";
@@ -50,17 +60,32 @@ export async function ingestItems(body: { sourceId?: unknown; sourceName?: unkno
     seen.add(url);
     const published = typeof it.publishedAt === "string" ? new Date(it.publishedAt) : null;
     const flags = it.raw?._aihot ?? {};
+    candidates.push({
+      title,
+      rawUrl,
+      author: typeof it.author === "string" ? it.author.slice(0, 200) : null,
+      excerpt: typeof it.excerpt === "string" ? it.excerpt.trim().slice(0, 2000) || null : null,
+      publishedAt: published && Number.isFinite(published.getTime()) ? published : null,
+      raw: it.raw,
+      backfill: flags.backfill ? "reported-backfill" : flags.baseline ? "reported-baseline" : null,
+    });
+  }
+
+  let created = 0;
+  for (const it of await reuseExternalMaterialIdentities(source.id, candidates)) {
     const res = await upsertMaterial({
       sourceId: source!.id,
       // Normalize only for deduplication. Ownership needs the reported origin (including www and
       // scheme), and upsertMaterial already applies the common normalized identity rule.
-      url: rawUrl,
-      title,
-      author: typeof it.author === "string" ? it.author.slice(0, 200) : null,
-      publishedAt: published && Number.isFinite(published.getTime()) ? published : null,
+      url: it.rawUrl,
+      title: it.title,
+      identityKey: it.identityKey,
+      author: it.author,
+      excerpt: it.excerpt,
+      publishedAt: it.publishedAt,
       raw: it.raw ?? null,
       via: "ingest",
-      backfill: flags.backfill ? "reported-backfill" : flags.baseline ? "reported-baseline" : null,
+      backfill: it.backfill,
     });
     if (res.created) created += 1;
     if (res.created || res.revised || res.processingNeeded) await queueProcessing(res.articleId);
