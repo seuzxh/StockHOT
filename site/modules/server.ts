@@ -2,5 +2,6 @@
 import type { ServerModule } from "@aihot/backend/modules";
 import { IFIND_SERVER_MODULE } from "../../modules/ifind/server.ts";
 import { STOCKS_SERVER_MODULE } from "../../modules/stocks/server.ts";
+import { STOCK_REPORTS_SERVER_MODULE } from "../../modules/stock-reports/server.ts";
 
-export const SERVER_MODULES: readonly ServerModule[] = [IFIND_SERVER_MODULE, STOCKS_SERVER_MODULE];
+export const SERVER_MODULES: readonly ServerModule[] = [IFIND_SERVER_MODULE, STOCKS_SERVER_MODULE, STOCK_REPORTS_SERVER_MODULE];

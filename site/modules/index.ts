@@ -4,5 +4,6 @@
 import type { ModuleDeclaration } from "@aihot/contracts/modules";
 import { IFIND_MODULE } from "../../modules/ifind/module.ts";
 import { STOCKS_MODULE } from "../../modules/stocks/module.ts";
+import { STOCK_REPORTS_MODULE } from "../../modules/stock-reports/module.ts";
 
-export const MODULES: readonly ModuleDeclaration[] = [IFIND_MODULE, STOCKS_MODULE];
+export const MODULES: readonly ModuleDeclaration[] = [IFIND_MODULE, STOCKS_MODULE, STOCK_REPORTS_MODULE];
