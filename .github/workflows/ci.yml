@@ -20,5 +20,5 @@ jobs:
           package-manager-cache: false
       - run: npm ci --no-audit --no-fund
       - run: npm run typecheck
-      - run: npm run test:standalone
       - run: npm run build -w @aihot/web
+      - run: npm run test:standalone
