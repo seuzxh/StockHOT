@@ -14,6 +14,11 @@ export function beijingTime(instant: Date | string | number): string {
   return d.toISOString().slice(11, 16);
 }
 
+/** YYYY-MM-DD HH:mm of the instant in Beijing time. */
+export function beijingStamp(instant: Date | string | number): string {
+  return `${beijingDate(instant)} ${beijingTime(instant)}`;
+}
+
 /** UTC instant of 00:00 Beijing on the given calendar day. */
 export function beijingMidnight(date: string): Date {
   return new Date(Date.parse(`${date}T00:00:00+08:00`));

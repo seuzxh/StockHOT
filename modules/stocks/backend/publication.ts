@@ -98,17 +98,18 @@ export async function loadSourceStatuses(now = new Date()): Promise<SourceStatus
       SELECT new_count,status FROM fetch_runs WHERE source_id=s.id ORDER BY started_at DESC LIMIT 1
     ) run ON true
     WHERE s.id=ANY(${["jiuyangongshe", "ifind-news"]}) ORDER BY s.id`;
-  const [ifindRun] = await sql<Array<{ detail: Record<string, unknown> | null }>>`
-    SELECT detail FROM job_runs WHERE job='ifind.collect' AND status='ok' ORDER BY started_at DESC LIMIT 1`;
+  const [ifindRun] = await sql<Array<{ status: string; detail: Record<string, unknown> | null }>>`
+    SELECT status,detail FROM job_runs WHERE job='ifind.collect' ORDER BY started_at DESC LIMIT 1`;
   return sources.map((source) => {
     let state: SourceState = "ok";
-    const ifindStatus = source.id === "ifind-news" ? String(ifindRun?.detail?.status ?? "") : "";
+    const isIfind = source.id === "ifind-news";
+    const ifindStatus = isIfind && ifindRun?.status === "ok" ? String(ifindRun.detail?.status ?? "") : "";
     if (!source.enabled) state = "disabled";
-    else if (ifindStatus === "no_results") state = "ifind_no_results";
     else if (ifindStatus === "quota_exhausted") state = "quota_exhausted";
     else if (ifindStatus === "auth_invalid") state = "auth_invalid";
     else if (!source.last_ok_at) state = "coverage_incomplete";
-    else if (source.health !== "ok" || !source.last_fetch_at || now.getTime() - source.last_fetch_at.getTime() > source.interval_minutes * 120_000 || source.latest_status === "failed") state = "delayed";
+    else if (source.health !== "ok" || !source.last_fetch_at || now.getTime() - source.last_fetch_at.getTime() > source.interval_minutes * 120_000 || source.latest_status === "failed" || isIfind && ifindRun?.status === "failed") state = "delayed";
+    else if (ifindStatus === "no_results") state = "ifind_no_results";
     else if (source.latest_status === "ok" && source.latest_new_count === 0) state = "no_new";
     return { id: source.id, name: source.name, state, lastFetchAt: source.last_fetch_at?.toISOString() ?? null, lastOkAt: source.last_ok_at?.toISOString() ?? null };
   });

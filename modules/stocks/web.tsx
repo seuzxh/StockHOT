@@ -5,6 +5,7 @@ import { IconBookmark, IconInfo } from "@aihot/web/components/icons";
 import { apiGet, cachedPage, pageHeaders } from "@aihot/web/lib/api.server";
 import { pageMeta } from "@aihot/web/lib/seo";
 import { EmptyState } from "@aihot/web/components/ui/Page";
+import { beijingStamp } from "@aihot/contracts/time";
 import type { SourceStatus, StockPage } from "./backend/publication.ts";
 import { exportWatchlist, importWatchlistData, type WatchlistData } from "./watchlist.ts";
 
@@ -98,7 +99,7 @@ const STATE_LABEL: Record<SourceStatus["state"], string> = {
 };
 
 function StatusPage({ sources }: { sources: SourceStatus[] }) {
-  return <main className="mx-auto max-w-4xl pb-14 pt-5"><h1 className="text-2xl font-bold text-ink">来源状态</h1><div className="card mt-6 overflow-hidden"><table className="w-full text-left text-sm"><thead className="bg-surface-2 text-ink-3"><tr><th className="px-5 py-3">来源</th><th className="px-5 py-3">状态</th><th className="px-5 py-3">最近成功</th></tr></thead><tbody>{sources.map((source) => <tr key={source.id} className="border-t border-line-soft"><td className="px-5 py-4 font-semibold text-ink">{source.name}</td><td className="px-5 py-4 text-ink-2">{STATE_LABEL[source.state]}</td><td className="px-5 py-4 text-ink-4">{source.lastOkAt ? new Date(source.lastOkAt).toLocaleString("zh-CN") : "—"}</td></tr>)}</tbody></table></div></main>;
+  return <main className="mx-auto max-w-4xl pb-14 pt-5"><h1 className="text-2xl font-bold text-ink">来源状态</h1><div className="card mt-6 overflow-hidden"><table className="w-full text-left text-sm"><thead className="bg-surface-2 text-ink-3"><tr><th className="px-5 py-3">来源</th><th className="px-5 py-3">状态</th><th className="px-5 py-3">最近成功</th></tr></thead><tbody>{sources.map((source) => <tr key={source.id} className="border-t border-line-soft"><td className="px-5 py-4 font-semibold text-ink">{source.name}</td><td className="px-5 py-4 text-ink-2">{STATE_LABEL[source.state]}</td><td className="px-5 py-4 text-ink-4">{source.lastOkAt ? beijingStamp(source.lastOkAt) : "—"}</td></tr>)}</tbody></table></div></main>;
 }
 
 function StockPageView({ page }: { page: StockPage }) {

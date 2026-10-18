@@ -17,4 +17,6 @@ test("StockHOT identity uses its own reader brand and safe iFinD defaults", asyn
   assert.match(envExample, /^IFIND_MCP_BASE_URL=https:\/\/api-mcp\.51ifind\.com:8643\/ds-mcp-servers\/hexin-ifind-ds-news-mcp$/m);
   assert.match(envExample, /^IFIND_NEWS_ENABLED=false$/m);
   assert.match(envExample, /^IFIND_NEWS_INTERVAL_MINUTES=5$/m);
+  assert.match(envExample, /^COLLECT_ENABLED=false$/m);
+  assert.match(envExample, /^MODEL_CALLS_ENABLED=false$/m);
 });

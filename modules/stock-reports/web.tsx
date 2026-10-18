@@ -4,6 +4,7 @@ import { IconClock } from "@aihot/web/components/icons";
 import { apiGet, cachedPage, pageHeaders } from "@aihot/web/lib/api.server";
 import { pageMeta } from "@aihot/web/lib/seo";
 import { EmptyState } from "@aihot/web/components/ui/Page";
+import { beijingStamp } from "@aihot/contracts/time";
 import type { SessionReportContent } from "./reports.ts";
 
 interface SessionReport {
@@ -55,7 +56,7 @@ export default function StockReportRoute() {
   if (!report) return <main className="mx-auto max-w-4xl pb-14 pt-5"><h1 className="text-2xl font-bold text-ink">{title}</h1><div className="card mt-6 p-5"><EmptyState title="报告尚未生成">请在对应截止时间后刷新。</EmptyState></div></main>;
   return <main className="mx-auto max-w-4xl pb-14 pt-5">
     <h1 className="text-2xl font-bold text-ink">{title}</h1>
-    <p className="mt-2 text-sm text-ink-3">{report.tradingDate} · 截止 {new Date(report.cutoffAt).toLocaleString("zh-CN")}</p>
+    <p className="mt-2 text-sm text-ink-3">{report.tradingDate} · 截止 {beijingStamp(report.cutoffAt)}</p>
     <section className="card mt-6 p-5">
       <h2 className="font-semibold text-ink">{OUTCOME[report.content.outcome]}</h2>
       {report.content.missingSources.length > 0 && <p className="mt-2 text-sm text-hot">缺失来源：{report.content.missingSources.join("、")}</p>}

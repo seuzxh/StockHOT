@@ -9,16 +9,18 @@
 ## 自动验证
 
 验证日期为 2026-10-18。
-运行时为 Node.js 24.11.0。
+运行时为 Node.js 24.11.1。
 
 | 检查 | 结果 | 证据 |
 |---|---|---|
 | 依赖安装 | 通过 | `npm ci --no-audit --no-fund` |
 | 类型检查 | 通过 | `npm run typecheck` |
-| 独立测试 | 218 项通过 | `npm run test:standalone` |
-| 数据库测试 | 831 项通过 | `npm test` |
+| 独立测试 | 219 项通过 | `npm run test:standalone` |
+| 数据库测试 | 833 项通过 | `npm test` |
+| 网页测试 | 56 项通过 | `node --test --test-concurrency=1 apps/web/tests/*.test.ts` |
 | 网页构建 | 通过 | `npm run build -w @aihot/web` |
-| 容器冒烟 | 全部通过 | `node scripts/smoke.ts` |
+| 运行时冒烟 | 34 项通过 | `node scripts/smoke.ts --base http://127.0.0.1:3000` |
+| 生产依赖审计 | 0 个漏洞 | `npm audit --omit=dev --audit-level=high` |
 
 数据库使用 PostgreSQL 17。
 测试库名称以 `_test` 结尾。
@@ -29,13 +31,7 @@
 
 ### iFinD MCP
 
-三个工具都已直接调用。
-`search_news` 返回 HTTP 200。
-`search_notice` 返回 HTTP 200。
-`search_trending_news` 返回 HTTP 200。
-
-账户额度已于 2026-10-18 恢复。
-三个工具均返回实际检索结果。
+2026-10-18 的早期复测曾返回结果。
 项目客户端完成了真实响应解析。
 
 | 工具 | 状态 | 条目 | 元数据结果 |
@@ -49,9 +45,14 @@
 响应使用嵌套中文字段结构。
 标准化器已增加该结构支持。
 
+本次全面复测采用顺序限速请求。
+三个工具现均返回额度耗尽。
+当前状态以本次复测为准。
+iFinD 因此继续保持停用。
+
 ### 网页来源
 
-韭研公社完成周末匿名技术预览。
+韭研公社再次完成周末技术预览。
 预览得到 26 条唯一链接。
 五个交易日验证尚未完成。
 
@@ -107,8 +108,21 @@
 | A26 | 已验证 | iFinD 幂等测试 |
 | A27 | 已验证 | iFinD 待核验测试 |
 
+## 本次修复
+
+- 来源状态优先显示最新失败状态。
+- 页面时间固定使用北京时间。
+- 采集与模型调用默认关闭。
+
+## 未验证项
+
+本地 Dockerfile 构建停在 Debian 镜像源。
+当前代码已通过替代容器运行时冒烟。
+最终 Dockerfile 构建由远端 CI 复核。
+
 ## 未解决项
 
 韭研公社仍需五个交易日。
-iFinD 仍需部署凭据和连续运行验收。
+iFinD 当前额度已耗尽。
+iFinD 仍需连续运行验收。
 完成这些条件后才能启用两源。
