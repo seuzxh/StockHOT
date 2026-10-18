@@ -29,7 +29,7 @@ test("StockHOT topics and sources use stable identities and stay fail closed", a
 
   assert.ok(topics.topics.some((topic) => topic.entityId === "sh-600519"));
   assert.ok(topics.topics.some((topic) => topic.entityId === "sz-300750"));
-  assert.deepEqual(sources.sources.map((source) => source.id).sort(), ["ifind-news", "jiuyangongshe", "robo-datayes"]);
+  assert.deepEqual(sources.sources.map((source) => source.id).sort(), ["ifind-news", "jiuyangongshe"]);
   assert.ok(sources.sources.every((source) => source.enabled === false));
   assert.ok(sources.sources.every((source) => source.site_fulltext === false));
   assert.equal(JSON.stringify(sources).includes("10jqka"), false);

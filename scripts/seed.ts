@@ -23,6 +23,13 @@ interface SeedSource {
 }
 
 const { sources } = JSON.parse(readFileSync(path.join(REPO_ROOT, "industry/sources.json"), "utf8")) as { sources: SeedSource[] };
+
+// Retire the removed StockHOT source on upgrades. Preserve historical articles if any exist.
+await sql`UPDATE sources SET enabled=false,next_fetch_at=NULL WHERE id='robo-datayes'`;
+await sql`DELETE FROM sources s WHERE s.id='robo-datayes' AND NOT EXISTS (
+  SELECT 1 FROM articles a WHERE a.source_id=s.id
+)`;
+
 let added = 0;
 for (const s of sources) {
   assertSupportedConfig(s.kind, s.config);

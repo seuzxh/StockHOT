@@ -12,6 +12,6 @@ export function ifindQueries(now: Date): IfindQuery[] {
   return [
     { tool: "search_news", args: { query: "A股 市场 行业 上市公司重大事件", time_start: start, time_end: end, size: 50 } },
     { tool: "search_notice", args: { query: "沪深北上市公司 公告 监管披露", time_start: start, time_end: end, size: 50 } },
-    { tool: "search_trending_news", args: { keyword: "A股", industry_name: "", time_scope: "24小时", size: 50 } },
+    { tool: "search_trending_news", args: { keyword: "A股", time_scope: "24小时", size: 50 } },
   ];
 }

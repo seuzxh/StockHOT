@@ -57,6 +57,7 @@ test("scheduled iFinD collection uses fixed rolling queries and idempotent exter
   assert.equal(articles[0]?.raw.stockhot.channel, "ifind");
   assert.equal(articles[0]?.raw.stockhot.originalPublisher, "某证券交易所");
   assert.equal(articles[0]?.raw.stockhot.evidenceScope, "snippet");
+  assert.equal(articles[0]?.raw.stockhot.timePrecision, "second");
   assert.equal(articles[0]?.body_status, "unconfirmed");
   const jobs = await sql<{ name: string }[]>`SELECT name FROM pgboss.job WHERE data->>'articleId'=${articles[0]!.id}`;
   assert.ok(jobs.every((job) => job.name !== "content.extract-body"), "iFinD snippets must never fetch their original web page");
@@ -68,6 +69,26 @@ test("scheduled iFinD collection uses fixed rolling queries and idempotent exter
   assert.equal(JSON.stringify(articles).includes("test-token"), false);
   const runs = await sql<{ status: string }[]>`SELECT status FROM ifind_query_runs WHERE query_batch->>'requestedAt'='2026-10-17T02:00:00.000Z'`;
   assert.equal(runs.length, 3);
+});
+
+test("date-only iFinD evidence stays pending without an invented time", async () => {
+  process.env.COLLECT_ENABLED = "true";
+  process.env.IFIND_NEWS_ENABLED = "true";
+  process.env.IFIND_MCP_AUTH_TOKEN = "test-token";
+  const result = await collectIfindNews(new Date("2026-10-18T02:00:00.000Z"), {
+    call: async (tool) => ok(tool, tool === "search_news" ? [{
+      资讯标题: "日期精度测试",
+      资讯内容: "只提供发布日期。",
+      日期: "2026-10-18",
+      URL: "https://example.com/date-only",
+    }] : []),
+  });
+  assert.equal(result.created, 0);
+  assert.equal(result.pending, 1);
+  const [pending] = await sql<{ published_at: Date; verification: { status: string; timePrecision: string } }[]>`
+    SELECT published_at,verification FROM ifind_pending_items WHERE url='https://example.com/date-only'`;
+  assert.equal(pending?.published_at.toISOString(), "2026-10-18T00:00:00.000Z");
+  assert.deepEqual(pending?.verification, { status: "pending_imprecise_time", timePrecision: "date" });
 });
 
 test("iFinD collection distinguishes no results, quota exhaustion and invalid credentials", async () => {

@@ -37,7 +37,7 @@ const defaults: CollectorDependencies = {
   recordPending: async (items) => {
     for (const item of items) await sql`INSERT INTO ifind_pending_items
       (fingerprint,title,snippet,url,published_at,publisher,verification,query_batch,first_seen_at,last_seen_at)
-      VALUES (${item.fingerprint},${item.title},${item.snippet},${item.url},${item.publishedAt},${item.publisher},${sql.json(item.verification as never)},${sql.json(item.batch as never)},now(),now())
+      VALUES (${item.fingerprint},${item.title},${item.snippet},${item.url},${item.publishedAt},${item.publisher},${sql.json({ status: item.verification, timePrecision: item.timePrecision } as never)},${sql.json(item.batch as never)},now(),now())
       ON CONFLICT (fingerprint) DO UPDATE SET last_seen_at=now(),title=EXCLUDED.title,snippet=EXCLUDED.snippet,
         url=EXCLUDED.url,published_at=EXCLUDED.published_at,publisher=EXCLUDED.publisher,
         verification=EXCLUDED.verification,query_batch=EXCLUDED.query_batch`;
@@ -79,10 +79,10 @@ export async function collectIfindNews(now: Date, overrides: Partial<CollectorDe
 
     const items = normalizeIfindResult(response.result, batch);
     summary.returned += items.length;
-    const eligible = items.filter((item) => item.url && item.publishedAt);
+    const eligible = items.filter((item) => item.verification === "traceable");
     summary.eligible += eligible.length;
     summary.pending += items.length - eligible.length;
-    const pending = items.filter((item) => !item.url || !item.publishedAt);
+    const pending = items.filter((item) => item.verification !== "traceable");
     await dependencies.recordPending(pending);
     await dependencies.recordBatch(batch, items.length ? "ok" : "no_results", { returned: items.length, eligible: eligible.length, pending: pending.length });
     if (!eligible.length) continue;
@@ -101,6 +101,7 @@ export async function collectIfindNews(now: Date, overrides: Partial<CollectorDe
             originalPublisher: item.publisher,
             snippet: item.snippet,
             evidenceScope: item.evidenceScope,
+            timePrecision: item.timePrecision,
             queryBatch: item.batch,
             traceability: item.verification,
           },

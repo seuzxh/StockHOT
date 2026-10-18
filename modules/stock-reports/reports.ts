@@ -65,7 +65,7 @@ export async function loadSessionReport(kind: SessionKind, tradingDate?: string)
   };
 }
 
-const SOURCE_IDS = ["jiuyangongshe", "robo-datayes", "ifind-news"];
+const SOURCE_IDS = ["jiuyangongshe", "ifind-news"];
 
 export async function generateSessionReport(kind: SessionKind, tradingDate: string) {
   const window = sessionWindow(kind, tradingDate);

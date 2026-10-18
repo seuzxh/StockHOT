@@ -34,7 +34,7 @@ export interface QueryBatch {
 }
 
 export type TimePrecision = "second" | "minute" | "date" | "unknown";
-export type VerificationStatus = "traceable" | "pending_missing_link" | "pending_missing_time" | "pending_untraceable";
+export type VerificationStatus = "traceable" | "pending_missing_link" | "pending_missing_time" | "pending_imprecise_time" | "pending_untraceable";
 
 export interface NormalizedIfindItem {
   title: string;

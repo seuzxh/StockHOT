@@ -40,10 +40,19 @@ function time(value: string | null): { publishedAt: string | null; timePrecision
 const fingerprint = (parts: unknown[]) => createHash("sha256").update(JSON.stringify(parts)).digest("hex");
 
 function rows(value: unknown): Row[] {
+  if (typeof value === "string") {
+    try {
+      return rows(JSON.parse(value));
+    } catch {
+      return [];
+    }
+  }
   if (Array.isArray(value)) return value.flatMap(rows);
   if (!object(value)) return [];
   for (const key of ["data", "items", "records", "documents", "list", "result"]) {
-    if (Array.isArray(value[key])) return rows(value[key]);
+    if (value[key] !== undefined && value[key] !== null) {
+      return rows(value[key]);
+    }
   }
   return [value];
 }
@@ -62,22 +71,23 @@ function payloadRows(input: unknown): Row[] {
   return output;
 }
 
-function verification(url: string | null, publishedAt: string | null, externalId: string | null, publisher: string | null): VerificationStatus {
+function verification(url: string | null, publishedAt: string | null, timePrecision: TimePrecision, externalId: string | null, publisher: string | null): VerificationStatus {
   if (!url && !publishedAt && !externalId && !publisher) return "pending_untraceable";
   if (!url) return "pending_missing_link";
   if (!publishedAt) return "pending_missing_time";
+  if (timePrecision === "date") return "pending_imprecise_time";
   return "traceable";
 }
 
 export function normalizeIfindResult(input: unknown, batch: QueryBatch): NormalizedIfindItem[] {
   const normalized = payloadRows(input).flatMap((row): NormalizedIfindItem[] => {
-    const snippet = firstString(row, ["snippet", "summary", "content", "text", "paragraph", "abstract"]) ?? "";
-    const rawTitle = firstString(row, ["title", "news_title", "headline", "name"]);
+    const snippet = firstString(row, ["snippet", "summary", "content", "text", "paragraph", "abstract", "资讯内容", "公告片段内容"]) ?? "";
+    const rawTitle = firstString(row, ["title", "news_title", "headline", "name", "资讯标题", "公告标题"]);
     const title = rawTitle ?? (snippet.split(/\r?\n/, 1)[0]!.slice(0, 120) || "未命名 iFinD 片段");
-    const url = safeUrl(firstString(row, ["url", "link", "source_url", "original_url", "news_url"]));
-    const published = time(firstString(row, ["publishedAt", "published_at", "publish_time", "publishTime", "date", "time"]));
-    const publisher = firstString(row, ["publisher", "source_name", "source", "media_name", "org_name"]);
-    const externalId = firstString(row, ["externalId", "external_id", "news_id", "doc_id", "id"]);
+    const url = safeUrl(firstString(row, ["url", "link", "source_url", "original_url", "news_url", "URL", "链接", "原文链接"]));
+    const published = time(firstString(row, ["publishedAt", "published_at", "publish_time", "publishTime", "date", "time", "日期", "发布时间"]));
+    const publisher = firstString(row, ["publisher", "source_name", "source", "media_name", "org_name", "来源", "媒体", "发布机构"]);
+    const externalId = firstString(row, ["externalId", "external_id", "news_id", "doc_id", "id", "资讯ID", "公告ID"]);
     const hash = fingerprint([title, url, published.publishedAt, snippet, publisher]);
     return [{
       title,
@@ -90,7 +100,7 @@ export function normalizeIfindResult(input: unknown, batch: QueryBatch): Normali
       batch,
       externalId,
       fingerprint: hash,
-      verification: verification(url, published.publishedAt, externalId, publisher),
+      verification: verification(url, published.publishedAt, published.timePrecision, externalId, publisher),
       evidenceScope: "snippet",
     }];
   });

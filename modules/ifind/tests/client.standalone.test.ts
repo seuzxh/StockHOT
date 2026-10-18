@@ -1,8 +1,15 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { callIfind, type Transport } from "../client.ts";
+import { ifindQueries } from "../queries.ts";
 
 const sessionHeaders = { "mcp-session-id": "session-1" };
+
+test("trending query omits an empty industry filter", () => {
+  const trending = ifindQueries(new Date("2026-10-18T01:00:00.000Z")).find((query) => query.tool === "search_trending_news");
+  assert.ok(trending);
+  assert.equal("industry_name" in trending.args, false);
+});
 
 test("iFinD client initializes a session and calls only approved news tools", async () => {
   const requests: Parameters<Transport>[0][] = [];

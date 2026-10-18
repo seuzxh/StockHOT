@@ -26,20 +26,6 @@
       "enabled": false
     },
     {
-      "id": "robo-datayes",
-      "name": "萝卜投研",
-      "kind": "external",
-      "config": {},
-      "tier": "T2",
-      "owner_entity_id": null,
-      "participation_mode": "isolated",
-      "interval_minutes": 15,
-      "tags": ["研究数据", "待验证"],
-      "site_fulltext": false,
-      "syndicate_fulltext": false,
-      "enabled": false
-    },
-    {
       "id": "ifind-news",
       "name": "同花顺 iFinD 资讯",
       "kind": "external",

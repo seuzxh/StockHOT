@@ -64,3 +64,30 @@ test("iFinD normalization retains unstructured text as untraceable evidence", ()
   assert.equal(items[0]?.publishedAt, null);
   assert.deepEqual(normalizeIfindResult({ unexpected: true }, batch), []);
 });
+
+test("iFinD normalization accepts the live nested Chinese response shape", () => {
+  const items = normalizeIfindResult({ content: [{ type: "text", text: JSON.stringify({
+    code: 1,
+    msg: "success",
+    data: { data: JSON.stringify([{
+      资讯标题: "某公司发布经营进展",
+      资讯内容: "公司披露最新经营进展。",
+      日期: "2026-10-18",
+      URL: "https://example.com/news/live-shape",
+    }]) },
+  }) }] }, batch);
+
+  assert.equal(items.length, 1);
+  assert.equal(items[0]?.title, "某公司发布经营进展");
+  assert.equal(items[0]?.snippet, "公司披露最新经营进展。");
+  assert.equal(items[0]?.publishedAt, "2026-10-18");
+  assert.equal(items[0]?.url, "https://example.com/news/live-shape");
+  assert.equal(items[0]?.verification, "pending_imprecise_time");
+});
+
+test("iFinD normalization keeps empty live containers empty", () => {
+  const direct = { content: [{ type: "text", text: JSON.stringify({ code: 1, data: [] }) }] };
+  const nested = { content: [{ type: "text", text: JSON.stringify({ code: 1, data: { data: "[]" } }) }] };
+  assert.deepEqual(normalizeIfindResult(direct, batch), []);
+  assert.deepEqual(normalizeIfindResult(nested, batch), []);
+});

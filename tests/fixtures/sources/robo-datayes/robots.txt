@@ -1,5 +1,0 @@
-User-agent: *
-Disallow: /v2/discovery/news/news_plus
-Disallow: /v2/discovery/announcement/announcement
-Disallow: /v2/details/news
-Disallow: /v2/details/report

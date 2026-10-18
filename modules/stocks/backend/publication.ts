@@ -97,7 +97,7 @@ export async function loadSourceStatuses(now = new Date()): Promise<SourceStatus
     FROM sources s LEFT JOIN LATERAL (
       SELECT new_count,status FROM fetch_runs WHERE source_id=s.id ORDER BY started_at DESC LIMIT 1
     ) run ON true
-    WHERE s.id=ANY(${["jiuyangongshe", "robo-datayes", "ifind-news"]}) ORDER BY s.id`;
+    WHERE s.id=ANY(${["jiuyangongshe", "ifind-news"]}) ORDER BY s.id`;
   const [ifindRun] = await sql<Array<{ detail: Record<string, unknown> | null }>>`
     SELECT detail FROM job_runs WHERE job='ifind.collect' AND status='ok' ORDER BY started_at DESC LIMIT 1`;
   return sources.map((source) => {

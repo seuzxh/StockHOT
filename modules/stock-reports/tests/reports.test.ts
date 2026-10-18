@@ -11,12 +11,12 @@ after(closeDb);
 test("empty highlights and missing sources remain distinct report outcomes", () => {
   const window = sessionWindow("postmarket", "2026-10-08")!;
   const complete = buildSessionReport(window, [], [
-    { id: "jiuyangongshe", available: true }, { id: "robo-datayes", available: true }, { id: "ifind-news", available: true },
+    { id: "jiuyangongshe", available: true }, { id: "ifind-news", available: true },
   ]);
   assert.equal(complete.outcome, "no_highlights");
   assert.deepEqual(complete.missingSources, []);
   const incomplete = buildSessionReport(window, [], [
-    { id: "jiuyangongshe", available: false }, { id: "robo-datayes", available: true }, { id: "ifind-news", available: true },
+    { id: "jiuyangongshe", available: false }, { id: "ifind-news", available: true },
   ]);
   assert.equal(incomplete.outcome, "incomplete");
   assert.deepEqual(incomplete.missingSources, ["jiuyangongshe"]);

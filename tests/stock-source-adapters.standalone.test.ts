@@ -18,13 +18,3 @@ test("Jiuyangongshe public listing fixture yields stable title, URL and Beijing 
   ]);
   assert.equal(source.enabled, false, "five trading days of live evidence are not complete");
 });
-
-test("Datayes remains external and disabled when robots blocks news paths", () => {
-  const source = sources.find((item) => item.id === "robo-datayes")!;
-  const robots = readFileSync(new URL("./fixtures/sources/robo-datayes/robots.txt", import.meta.url), "utf8");
-  const shell = readFileSync(new URL("./fixtures/sources/robo-datayes/shell.html", import.meta.url), "utf8");
-  assert.match(robots, /Disallow: \/v2\/details\/news/);
-  assert.doesNotMatch(shell, /href=["'][^"']*(?:news|report)/);
-  assert.equal(source.kind, "external");
-  assert.equal(source.enabled, false);
-});
